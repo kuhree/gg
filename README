@@ -1,4 +1,4 @@
-# GLHF (Go Game Engine)
+# GG (Go Game Engine)
 
 GG is a bunch of classic games written in Go. It's designed to create classic arcade-style games using ASCII characters for rendering.
 
@@ -45,7 +45,7 @@ The `examples/` directory contains implementations of classic 2D games, includin
 
 The game launcher can be used in the following ways:
 
-- `glhf`: Launch a menu to choose games
+- `gg`: Launch a menu to choose games
 - `glf [game]`: Launch directly into a specific game
 - `--dev`: Enable Debug logging
 

@@ -6,7 +6,11 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/kuhree/glhf/internal/utils"
+	"github.com/kuhree/gg/examples/frames"
+	"github.com/kuhree/gg/examples/space_invaders"
+	"github.com/kuhree/gg/internal/engine/core"
+	"github.com/kuhree/gg/internal/engine/render"
+	"github.com/kuhree/gg/internal/utils"
 )
 
 var (
@@ -27,7 +31,23 @@ var games = []struct {
 	name   string
 	launch func() error
 }{
-	{"Space Invaders", notImplemented},
+	{"Frames", func() error {
+		renderer := render.NewRenderer(80, 24) // Create a 80x24 ASCII renderer
+		inputHandler := core.NewInputHandler()
+		game := frames.NewGame(renderer, utils.Logger)
+
+		gameLoop := core.NewGameLoop(game, renderer, inputHandler, utils.Logger)
+		return gameLoop.Run()
+	}},
+
+	{"Space Invaders", func() error {
+		renderer := render.NewRenderer(80, 24) // Create a 80x24 ASCII renderer
+		inputHandler := core.NewInputHandler()
+		game := space_invaders.NewGame(renderer, utils.Logger, inputHandler)
+
+		gameLoop := core.NewGameLoop(game, renderer, inputHandler, utils.Logger)
+		return gameLoop.Run()
+	}},
 	{"Pong", notImplemented},
 	{"Tetris", notImplemented},
 	{"Pac-Man", notImplemented},
@@ -79,7 +99,7 @@ func showGameMenu() {
 
 	var choice int
 	for {
-		fmt.Print("Enter the number of the game you want to play (or 1 to quit): ")
+		fmt.Print("Enter the number of the game you want to play (or 0 to quit): ")
 		_, err := fmt.Scanf("%d", &choice)
 		if err != nil || choice < 0 || choice > len(games) {
 			fmt.Println("Invalid input. Please try again.")
