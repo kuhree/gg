@@ -129,11 +129,11 @@ func NewGame(renderer *render.Renderer, logger *slog.Logger) *Game {
 		bulletSpeed: BulletSpeed,
 	}
 
-	game.sceneManager = scenes.NewManager(game)
-	game.sceneManager.AddScene(scenes.MainMenuSceneID, scenes.NewMainMenuScene(game))
-	game.sceneManager.AddScene(scenes.PlayingSceneID, scenes.NewPlayingScene(game))
-	game.sceneManager.AddScene(scenes.GameOverSceneID, scenes.NewGameOverScene(game))
-	game.sceneManager.AddScene(scenes.PauseMenuSceneID, scenes.NewPauseMenuScene(game))
+	game.sceneManager = scenes.NewManager()
+	game.sceneManager.AddScene(scenes.MainMenuSceneID, NewMainMenuScene(game))
+	game.sceneManager.AddScene(scenes.PlayingSceneID, NewPlayingScene(game))
+	game.sceneManager.AddScene(scenes.GameOverSceneID, NewGameOverScene(game))
+	game.sceneManager.AddScene(scenes.PauseMenuSceneID, NewPauseMenuScene(game))
 
 	game.sceneManager.ChangeScene(scenes.MainMenuSceneID)
 
