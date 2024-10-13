@@ -1,19 +1,21 @@
 package space_invaders
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/kuhree/gg/internal/engine/core"
 	"github.com/kuhree/gg/internal/engine/render"
 )
 
-// GameState represents the current state of the game
-type GameState int
+// GameMode represents the current state of the game
+type GameMode int
 
 const (
-	MainMenu GameState = iota
+	MainMenu GameMode = iota
 	Playing
 	GameOver
 	PauseMenu
@@ -33,47 +35,57 @@ type Vector2D struct {
 	X, Y float64
 }
 
-// Entity represents a basic game entity with position and speed
-type Entity struct {
+// GameObject represents a basic game entity with position and speed
+type GameObject struct {
 	Position Vector2D
 	Speed    float64
 }
 
 // Player represents the player's ship
 type Player struct {
-	Entity
+	GameObject
 
 	lives int
 }
 
 // Alien represents an enemy alien
 type Alien struct {
-	Entity
+	GameObject
 	Type   AlienType
 	Points int
 }
 
 // Bullet represents a projectile fired by the player or aliens
 type Bullet struct {
-	Entity
+	GameObject
 	Damage int
 }
 
 // Barrier represents a defensive structure
 type Barrier struct {
-	Entity
+	GameObject
 	Health int
+}
+
+// LevelConfig represents the configuration for a single level
+type LevelConfig struct {
+	AlienRows     int     `json:"alienRows"`
+	AliensPerRow  int     `json:"aliensPerRow"`
+	AlienSpeed    float64 `json:"alienSpeed"`
+	BarrierCount  int     `json:"barrierCount"`
+	BarrierHealth int     `json:"barrierHealth"`
 }
 
 // Game represents the Space Invaders game state and logic
 type Game struct {
 	renderer *render.Renderer
 	logger   *slog.Logger
-	state    GameState
+	state    GameMode
 
-	score    int
-	level    int
-	lastTime time.Time
+	score        int
+	currentLevel int
+	levels       []LevelConfig
+	lastTime     time.Time
 
 	player   *Player
 	aliens   []*Alien
@@ -88,16 +100,15 @@ type Game struct {
 	blinkInterval  float64
 	showPressEnter bool
 
-	// Game over fields
-	displayScore int
-
 	// Pause menu fields
 	pausePulseTimer float64
 	pausePulseScale float64
+
+	bulletSpeed float64
 }
 
 const (
-	PlayerSpeed = 30
+	PlayerSpeed = 1
 	BulletSpeed = 60
 	AlienSpeed  = 10
 	PlayerSize  = 1
@@ -110,7 +121,7 @@ const (
 func NewGame(renderer *render.Renderer, logger *slog.Logger) *Game {
 	width, height := renderer.Size()
 
-	return &Game{
+	game := &Game{
 		renderer: renderer,
 		logger:   logger,
 		state:    MainMenu,
@@ -118,15 +129,27 @@ func NewGame(renderer *render.Renderer, logger *slog.Logger) *Game {
 		width:    width,
 		height:   height,
 		player: &Player{
-			Entity: Entity{
-				Position: Vector2D{X: float64(width) / 2, Y: float64(height) - 3}, // Player starts at the bottom
+			GameObject: GameObject{
+				Position: Vector2D{X: float64(width) / 2, Y: float64(height) - 3},
 				Speed:    PlayerSpeed,
 			},
 			lives: 3,
 		},
 		blinkInterval:  0.5,
 		showPressEnter: true,
+		bulletSpeed:    60, // Initial bullet speed
 	}
+
+	if err := game.LoadLevels("examples/space_invaders/levels.json"); err != nil {
+		logger.Error("Failed to load levels", "error", err)
+	} else {
+		logger.Info("Levels loaded successfully", "count", len(game.levels))
+		if len(game.levels) == 1 {
+			logger.Info("Only one level loaded. Game will end after completing this level.")
+		}
+	}
+
+	return game
 }
 
 // Init initializes the game
@@ -186,15 +209,19 @@ func (g *Game) drawPlaying() {
 		g.renderer.DrawRect(int(barrier.Position.X-float64(BarrierSize)/2), int(barrier.Position.Y-float64(BarrierSize)/2), BarrierSize, BarrierSize, '+')
 	}
 
-	// Draw score and lives
-	g.renderer.DrawText(fmt.Sprintf("Score: %d", g.score), 1, 1)
+	// Draw score, level, remaining enemies, and lives
+	g.renderer.DrawText(fmt.Sprintf("Score: %d | Level: %d | Enemies: %d", g.score, g.currentLevel+1, len(g.aliens)), 1, 1)
 	g.renderer.DrawText(fmt.Sprintf("Lives: %d", g.player.lives), g.width-10, 1)
 }
 
 // drawGameOver handles the drawing logic for the game over screen
 func (g *Game) drawGameOver() {
-	g.renderer.DrawText("GAME OVER", g.width/2, g.height/3)
-	g.renderer.DrawText(fmt.Sprintf("Final Score: %d", g.displayScore), g.width/2, g.height/2)
+	if g.currentLevel >= len(g.levels) && len(g.aliens) == 0 {
+		g.renderer.DrawText("YOU WIN!", g.width/2, g.height/3)
+	} else {
+		g.renderer.DrawText("GAME OVER", g.width/2, g.height/3)
+	}
+	g.renderer.DrawText(fmt.Sprintf("Final Score: %d", g.score), g.width/2, g.height/2)
 	g.renderer.DrawText("Press ENTER to restart", g.width/2, 2*g.height/3)
 }
 
@@ -237,20 +264,13 @@ func (g *Game) updatePlaying(dt float64) {
 	g.logger.Debug("Updating playing state")
 	g.moveAliens(dt)
 	g.moveBullets(dt)
-	g.checkCollisions()
+	g.handleCollisions()
 	g.checkGameOver()
 }
 
 // updateGameOver handles updates for the game over state
 func (g *Game) updateGameOver(dt float64) {
 	// Add any animations or effects for the game over screen here
-	// For example, you could have a score counter that counts up to the final score
-	if g.displayScore < g.score {
-		g.displayScore += int(float64(g.score-g.displayScore) * dt * 2)
-		if g.displayScore > g.score {
-			g.displayScore = g.score
-		}
-	}
 }
 
 // updatePauseMenu handles updates for the pause menu state
@@ -281,7 +301,7 @@ func (g *Game) HandleInput(input core.InputEvent) error {
 	switch g.state {
 	case MainMenu:
 		if input.Key == core.KeyEnter {
-			g.reset()
+			g.startNewGame()
 		}
 	case Playing:
 		switch input.Key {
@@ -291,25 +311,30 @@ func (g *Game) HandleInput(input core.InputEvent) error {
 			g.state = PauseMenu
 			g.logger.Info("Game paused")
 		case core.KeyLeft:
-			g.player.Position.X -= g.player.Speed
-			g.player.Position.X = clamp(g.player.Position.X, float64(PlayerSize)/2, float64(g.width)-float64(PlayerSize)/2)
-			g.logger.Debug("Player moved left", "newX", g.player.Position.X)
+			g.movePlayer(-1, 0)
 		case core.KeyRight:
-			g.player.Position.X += g.player.Speed
-			g.player.Position.X = clamp(g.player.Position.X, float64(PlayerSize)/2, float64(g.width)-float64(PlayerSize)/2)
-			g.logger.Debug("Player moved right", "newX", g.player.Position.X)
+			g.movePlayer(1, 0)
 		case core.KeyUp:
-			g.player.Position.Y -= g.player.Speed
-			g.player.Position.Y = clamp(g.player.Position.Y, float64(PlayerSize)/2, float64(g.height)-float64(PlayerSize)/2)
-			g.logger.Debug("Player moved up", "newY", g.player.Position.Y)
+			g.movePlayer(0, -1)
 		case core.KeyDown:
-			g.player.Position.Y += g.player.Speed
-			g.player.Position.Y = clamp(g.player.Position.Y, float64(PlayerSize)/2, float64(g.height)-float64(PlayerSize)/2)
-			g.logger.Debug("Player moved down", "newY", g.player.Position.Y)
+			g.movePlayer(0, 1)
+		default:
+			switch input.Rune {
+			case 'w', 'W':
+				g.movePlayer(0, -1)
+			case 'a', 'A':
+				g.movePlayer(-1, 0)
+			case 's', 'S':
+				g.movePlayer(0, 1)
+			case 'd', 'D':
+				g.movePlayer(1, 0)
+			case ' ':
+				g.fireBullet()
+			}
 		}
 	case GameOver:
 		if input.Key == core.KeyEnter {
-			g.reset()
+			g.startNewGame()
 		}
 	case PauseMenu:
 		if input.Key == core.KeyBackspace {
@@ -321,68 +346,10 @@ func (g *Game) HandleInput(input core.InputEvent) error {
 	return nil
 }
 
-// spawnAliens creates a new wave of aliens
-func (g *Game) spawnAliens() {
-	const (
-		rows         = 2
-		aliensPerRow = 3
-		xMargin      = 2.0 // Margin from the sides of the screen
-		yMargin      = 2.0 // Margin from the top of the screen
-		xSpacing     = 2.0 // Horizontal space between aliens
-		ySpacing     = 2.0 // Vertical space between aliens
-	)
-
-	alienWidth := (float64(g.width) - 2*xMargin - float64(aliensPerRow-1)*xSpacing) / float64(aliensPerRow)
-	alienHeight := 1.0 // Set alien height to 1 unit
-
-	for row := 0; row < rows; row++ {
-		for col := 0; col < aliensPerRow; col++ {
-			alienType := AlienType(row / 2)
-			alien := &Alien{
-				Entity: Entity{
-					Position: Vector2D{
-						X: xMargin + float64(col)*(alienWidth+xSpacing) + alienWidth/2,
-						Y: yMargin + float64(row)*(alienHeight+ySpacing) + alienHeight/2,
-					},
-					Speed: AlienSpeed,
-				},
-				Type:   alienType,
-				Points: (3 - int(alienType)) * 10,
-			}
-			g.aliens = append(g.aliens, alien)
-		}
-	}
-	g.logger.Info("Spawned new wave of aliens", "level", g.level, "count", len(g.aliens))
-}
-
-// createBarriers initializes the defensive barriers
-func (g *Game) createBarriers() {
-	const (
-		barrierCount = 3
-		barrierWidth = 5
-		barrierY     = 5 // Distance from bottom
-	)
-
-	for i := 0; i < barrierCount; i++ {
-		barrier := &Barrier{
-			Entity: Entity{
-				Position: Vector2D{
-					X: float64(i+1)*(float64(g.width)/(barrierCount+1)) - float64(barrierWidth)/2,
-					Y: float64(g.height) - float64(barrierY),
-				},
-			},
-			Health: 4,
-		}
-		g.barriers = append(g.barriers, barrier)
-	}
-	g.logger.Info("Created defensive barriers")
-}
-
 // moveAliens updates the positions of all aliens
 func (g *Game) moveAliens(dt float64) {
 	moveDown := false
 	alienWidth := float64(AlienSize)
-	// moveDistance := AlienSpeed * dt
 
 	// Check if any alien has reached the screen edges
 	for _, alien := range g.aliens {
@@ -421,7 +388,6 @@ func (g *Game) moveAliens(dt float64) {
 
 // moveBullets updates the positions of all bullets
 func (g *Game) moveBullets(dt float64) {
-	initialCount := len(g.bullets)
 	for i := len(g.bullets) - 1; i >= 0; i-- {
 		bullet := g.bullets[i]
 		bullet.Position.Y -= bullet.Speed * dt // Bullets move upwards
@@ -431,68 +397,48 @@ func (g *Game) moveBullets(dt float64) {
 			g.bullets = append(g.bullets[:i], g.bullets[i+1:]...)
 		}
 	}
-	removedCount := initialCount - len(g.bullets)
-	if removedCount > 0 {
-		g.logger.Debug("Removed off-screen bullets", "count", removedCount)
-	}
 }
 
-// checkCollisions detects and handles collisions between game objects
-func (g *Game) checkCollisions() {
-	alienHitCount := 0
-	barrierHitCount := 0
-
-	// Check bullet collisions with aliens
+// handleCollisions detects and handles collisions between game objects
+func (g *Game) handleCollisions() {
+	// Check bullet collisions
 	for i := len(g.bullets) - 1; i >= 0; i-- {
 		bullet := g.bullets[i]
-		for j := len(g.aliens) - 1; j >= 0; j-- {
-			alien := g.aliens[j]
-			if checkCollision(bullet.Position, alien.Position, 5, 30) {
+		for j, alien := range g.aliens {
+			if checkCollision(bullet.Position, alien.Position, BulletSize, AlienSize) {
 				g.updateScore(alien.Points)
 				g.aliens = append(g.aliens[:j], g.aliens[j+1:]...)
 				g.bullets = append(g.bullets[:i], g.bullets[i+1:]...)
-				alienHitCount++
 				break
 			}
 		}
-	}
 
-	// Check bullet collisions with barriers
-	for i := len(g.bullets) - 1; i >= 0; i-- {
-		bullet := g.bullets[i]
-		for _, barrier := range g.barriers {
-			if checkCollision(bullet.Position, barrier.Position, 5, 60) {
-				barrier.Health--
+		for j, barrier := range g.barriers {
+			if checkCollision(bullet.Position, barrier.Position, BulletSize, AlienSize) {
+				g.barriers[j].Health -= bullet.Damage
 				g.bullets = append(g.bullets[:i], g.bullets[i+1:]...)
-				barrierHitCount++
+				if g.barriers[j].Health <= 0 {
+					g.barriers = append(g.barriers[:i], g.barriers[i+1:]...)
+				}
 				break
 			}
 		}
-	}
-
-	// Remove destroyed barriers
-	initialBarrierCount := len(g.barriers)
-	for i := len(g.barriers) - 1; i >= 0; i-- {
-		if g.barriers[i].Health <= 0 {
-			g.barriers = append(g.barriers[:i], g.barriers[i+1:]...)
-		}
-	}
-	destroyedBarrierCount := initialBarrierCount - len(g.barriers)
-
-	if alienHitCount > 0 || barrierHitCount > 0 || destroyedBarrierCount > 0 {
-		g.logger.Info("Collision results",
-			"aliensHit", alienHitCount,
-			"barriersHit", barrierHitCount,
-			"barriersDestroyed", destroyedBarrierCount)
 	}
 }
 
 // checkGameOver determines if the game should end
 func (g *Game) checkGameOver() {
 	if len(g.aliens) == 0 {
-		g.level++
-		g.logger.Info("Level completed", "newLevel", g.level)
-		g.spawnAliens()
+		g.currentLevel++
+		g.logger.Info("Level completed", "newLevel", g.currentLevel+1)
+
+		if g.currentLevel >= len(g.levels) {
+			g.logger.Info("All levels completed, game won!")
+			g.state = GameOver
+			return
+		}
+
+		g.initializeLevel()
 		return
 	}
 
@@ -536,14 +482,14 @@ func abs(x float64) float64 {
 // fireBullet creates a new bullet from the player's position
 func (g *Game) fireBullet() {
 	bullet := &Bullet{
-		Entity: Entity{
+		GameObject: GameObject{
 			Position: Vector2D{X: g.player.Position.X, Y: g.player.Position.Y - float64(PlayerSize)/2},
-			Speed:    BulletSpeed,
+			Speed:    g.bulletSpeed,
 		},
 		Damage: 1,
 	}
 	g.bullets = append(g.bullets, bullet)
-	g.logger.Info("Player fired a bullet")
+	g.logger.Info("Player fired a bullet", "bulletSpeed", g.bulletSpeed)
 }
 
 // updateScore increases the player's score
@@ -552,20 +498,115 @@ func (g *Game) updateScore(points int) {
 	g.logger.Info("Score updated", "score", g.score)
 }
 
-// reset initializes a new game
-func (g *Game) reset() {
+// startNewGame initializes a new game
+func (g *Game) startNewGame() {
 	g.logger.Info("Starting new game")
 	g.score = 0
-	g.level = 1
+	g.currentLevel = 0
 	g.player.lives = 3
-	g.player.Position = Vector2D{X: float64(g.width) / 2, Y: float64(g.height) - 3}
+	g.bulletSpeed = BulletSpeed
+	g.initializeLevel()
+	g.state = Playing // Add this line to change the game state
+}
+
+// movePlayer updates the player's position based on the given direction
+func (g *Game) movePlayer(dx, dy int) {
+	newX := g.player.Position.X + float64(dx)*g.player.Speed
+	newY := g.player.Position.Y + float64(dy)*g.player.Speed
+
+	// Clamp the player's position to stay within the game boundaries
+	newX = clamp(newX, float64(PlayerSize)/2, float64(g.width)-float64(PlayerSize)/2)
+	newY = clamp(newY, float64(PlayerSize)/2, float64(g.height)-float64(PlayerSize)/2)
+
+	g.player.Position.X = newX
+	g.player.Position.Y = newY
+
+	g.logger.Debug("Player moved",
+		"newX", newX,
+		"newY", newY,
+		"dx", dx,
+		"dy", dy)
+}
+
+// LoadLevels loads level data from a JSON file
+func (g *Game) LoadLevels(filename string) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return fmt.Errorf("failed to open levels file: %w", err)
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&g.levels); err != nil {
+		return fmt.Errorf("failed to decode levels data: %w", err)
+	}
+
+	g.logger.Info("Levels loaded successfully", "count", len(g.levels))
+	return nil
+}
+
+// initializeLevel configures the game state for the current level
+func (g *Game) initializeLevel() {
+	if g.currentLevel >= len(g.levels) {
+		g.logger.Info("All levels completed, restarting from the first level")
+		g.currentLevel = 0
+	}
+
+	if len(g.levels) == 0 {
+		g.logger.Error("No levels loaded")
+		return
+	}
+
+	levelData := g.levels[g.currentLevel]
+
+	// Reset game entities
 	g.aliens = nil
 	g.bullets = nil
 	g.barriers = nil
-	g.spawnAliens()
-	g.createBarriers()
-	g.state = Playing
-	g.displayScore = 0
-	g.pausePulseTimer = 0
-	g.pausePulseScale = 1
+
+	// Setup aliens
+	alienWidth := (float64(g.width) - 4.0 - float64(levelData.AliensPerRow-1)*2.0) / float64(levelData.AliensPerRow)
+	alienHeight := 1.0
+
+	for row := 0; row < levelData.AlienRows; row++ {
+		for col := 0; col < levelData.AliensPerRow; col++ {
+			alienType := AlienType(row / 2)
+			alien := &Alien{
+				GameObject: GameObject{
+					Position: Vector2D{
+						X: 2.0 + float64(col)*(alienWidth+2.0) + alienWidth/2,
+						Y: 2.0 + float64(row)*(alienHeight+2.0) + alienHeight/2,
+					},
+					Speed: levelData.AlienSpeed,
+				},
+				Type:   alienType,
+				Points: (3 - int(alienType)) * 10,
+			}
+			g.aliens = append(g.aliens, alien)
+		}
+	}
+
+	// Setup barriers
+	for i := 0; i < levelData.BarrierCount; i++ {
+		barrier := &Barrier{
+			GameObject: GameObject{
+				Position: Vector2D{
+					X: float64(i+1)*(float64(g.width)/(float64(levelData.BarrierCount)+1)) - float64(BarrierSize)/2,
+					Y: float64(g.height) - 5,
+				},
+			},
+			Health: levelData.BarrierHealth,
+		}
+		g.barriers = append(g.barriers, barrier)
+	}
+
+	// Set player position
+	g.player.Position = Vector2D{X: float64(g.width) / 2, Y: float64(g.height) - 3}
+
+	g.logger.Info("Level setup complete",
+		"level", g.currentLevel+1,
+		"aliens", len(g.aliens),
+		"barriers", len(g.barriers),
+		"alienSpeed", levelData.AlienSpeed,
+		"bulletSpeed", g.bulletSpeed)
 }

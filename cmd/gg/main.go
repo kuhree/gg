@@ -41,7 +41,7 @@ var games = []struct {
 
 	{"Space Invaders", func() error {
 		renderer := render.NewRenderer(80, 24) // Create a 80x24 ASCII renderer
-		game := space_invaders.NewGame(renderer, utils.Logger, )
+		game := space_invaders.NewGame(renderer, utils.Logger)
 
 		gameLoop := core.NewGameLoop(game, renderer, utils.Logger)
 		return gameLoop.Run()
@@ -86,6 +86,7 @@ func launchGame(gameName string) {
 	}
 
 	utils.Logger.Error("Game not found", "name", gameName)
+	showGameMenu()
 }
 
 func showGameMenu() {
