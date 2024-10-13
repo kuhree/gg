@@ -1,35 +1,30 @@
 [
   {
-    "alienRows": 1,
-    "aliensPerRow": 1,
+    "aliensCount": 1,
     "alienSpeed": 1,
     "barrierCount": 1,
     "barrierHealth": 1
   },
   {
-    "alienRows": 2,
-    "aliensPerRow": 3,
+    "aliensCount": 6,
     "alienSpeed": 1.2,
     "barrierCount": 2,
     "barrierHealth": 2
   },
   {
-    "alienRows": 3,
-    "aliensPerRow": 5,
+    "aliensCount": 15,
     "alienSpeed": 1.5,
     "barrierCount": 3,
     "barrierHealth": 3
   },
   {
-    "alienRows": 4,
-    "aliensPerRow": 7,
+    "aliensCount": 28,
     "alienSpeed": 1.8,
     "barrierCount": 3,
     "barrierHealth": 4
   },
   {
-    "alienRows": 5,
-    "aliensPerRow": 9,
+    "aliensCount": 45,
     "alienSpeed": 2.2,
     "barrierCount": 4,
     "barrierHealth": 5

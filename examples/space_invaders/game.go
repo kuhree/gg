@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"time"
 
-	"github.com/kuhree/gg/examples/space_invaders/scenes"
 	"github.com/kuhree/gg/internal/engine/core"
 	"github.com/kuhree/gg/internal/engine/render"
+	"github.com/kuhree/gg/internal/engine/scenes"
 )
 
 // GameMode represents the current state of the game
@@ -70,8 +71,7 @@ type Barrier struct {
 
 // LevelConfig represents the configuration for a single level
 type LevelConfig struct {
-	AlienRows     int     `json:"alienRows"`
-	AliensPerRow  int     `json:"aliensPerRow"`
+	AliensCount   int     `json:"aliensCount"`
 	AlienSpeed    float64 `json:"alienSpeed"`
 	BarrierCount  int     `json:"barrierCount"`
 	BarrierHealth int     `json:"barrierHealth"`
@@ -258,12 +258,17 @@ func (g *Game) initializeLevel() {
 	g.bullets = nil
 	g.barriers = nil
 
+	// Calculate number of rows and aliens per row
+	aliensPerRow := int(math.Sqrt(float64(levelData.AliensCount)))
+	alienRows := (levelData.AliensCount + aliensPerRow - 1) / aliensPerRow
+
 	// Setup aliens
-	alienWidth := (float64(g.width) - 4.0 - float64(levelData.AliensPerRow-1)*2.0) / float64(levelData.AliensPerRow)
+	alienWidth := (float64(g.width) - 4.0 - float64(aliensPerRow-1)*2.0) / float64(aliensPerRow)
 	alienHeight := 1.0
 
-	for row := 0; row < levelData.AlienRows; row++ {
-		for col := 0; col < levelData.AliensPerRow; col++ {
+	alienCount := 0
+	for row := 0; row < alienRows && alienCount < levelData.AliensCount; row++ {
+		for col := 0; col < aliensPerRow && alienCount < levelData.AliensCount; col++ {
 			alienType := AlienType(row / 2)
 			alien := &Alien{
 				GameObject: GameObject{
@@ -277,6 +282,7 @@ func (g *Game) initializeLevel() {
 				Points: (3 - int(alienType)) * 10,
 			}
 			g.aliens = append(g.aliens, alien)
+			alienCount++
 		}
 	}
 
@@ -300,6 +306,8 @@ func (g *Game) initializeLevel() {
 	g.logger.Info("Level setup complete",
 		"level", g.currentLevel+1,
 		"aliens", len(g.aliens),
+		"aliensPerRow", aliensPerRow,
+		"alienRows", alienRows,
 		"barriers", len(g.barriers),
 		"alienSpeed", levelData.AlienSpeed,
 		"bulletSpeed", g.bulletSpeed)
