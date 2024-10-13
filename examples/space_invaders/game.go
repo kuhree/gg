@@ -173,138 +173,6 @@ func (g *Game) HandleInput(input core.InputEvent) error {
 	return g.sceneManager.HandleInput(input)
 }
 
-// moveAliens updates the positions of all aliens
-func (g *Game) moveAliens(dt float64) {
-	moveDown := false
-	alienWidth := float64(AlienSize)
-
-	// Check if any alien has reached the screen edges
-	for _, alien := range g.aliens {
-		if (alien.Speed > 0 && alien.Position.X+alienWidth/2 >= float64(g.width)) ||
-			(alien.Speed < 0 && alien.Position.X-alienWidth/2 <= 0) {
-			moveDown = true
-			break
-		}
-	}
-
-	if moveDown {
-		// Reverse direction and move down
-		for _, alien := range g.aliens {
-			alien.Speed = -alien.Speed
-			alien.Position.Y += alienWidth / 2 // Move down by half the alien width
-		}
-		g.logger.Debug("Aliens moving down and reversing direction")
-	} else {
-		// Move horizontally
-		for _, alien := range g.aliens {
-			alien.Position.X += alien.Speed * dt
-		}
-	}
-
-	// Increase speed slightly each time aliens move down
-	if moveDown {
-		for _, alien := range g.aliens {
-			if alien.Speed > 0 {
-				alien.Speed += 1
-			} else {
-				alien.Speed -= 1
-			}
-		}
-	}
-}
-
-// moveBullets updates the positions of all bullets
-func (g *Game) moveBullets(dt float64) {
-	for i := len(g.bullets) - 1; i >= 0; i-- {
-		bullet := g.bullets[i]
-		bullet.Position.Y -= bullet.Speed * dt // Bullets move upwards
-
-		// Remove bullets that are off-screen
-		if bullet.Position.Y < 0 {
-			g.bullets = append(g.bullets[:i], g.bullets[i+1:]...)
-		}
-	}
-}
-
-// handleCollisions detects and handles collisions between game objects
-func (g *Game) handleCollisions() {
-	// Check bullet collisions
-	for i := len(g.bullets) - 1; i >= 0; i-- {
-		bullet := g.bullets[i]
-		for j, alien := range g.aliens {
-			if checkCollision(bullet.Position, alien.Position, BulletSize, AlienSize) {
-				g.updateScore(alien.Points)
-				g.aliens = append(g.aliens[:j], g.aliens[j+1:]...)
-				g.bullets = append(g.bullets[:i], g.bullets[i+1:]...)
-				break
-			}
-		}
-
-		for j, barrier := range g.barriers {
-			if checkCollision(bullet.Position, barrier.Position, BulletSize, AlienSize) {
-				g.barriers[j].Health -= bullet.Damage
-				g.bullets = append(g.bullets[:i], g.bullets[i+1:]...)
-				if g.barriers[j].Health <= 0 {
-					g.barriers = append(g.barriers[:i], g.barriers[i+1:]...)
-				}
-				break
-			}
-		}
-	}
-}
-
-// checkGameOver determines if the game should end
-func (g *Game) checkGameOver() {
-	if len(g.aliens) == 0 {
-		g.currentLevel++
-		g.logger.Info("Level completed", "newLevel", g.currentLevel+1)
-
-		if g.currentLevel >= len(g.levels) {
-			g.logger.Info("All levels completed, game won!")
-			g.ChangeScene(scenes.GameOverSceneID)
-			return
-		}
-
-		g.initializeLevel()
-		return
-	}
-
-	for _, alien := range g.aliens {
-		if alien.Position.Y+float64(AlienSize)/2 >= g.player.Position.Y-float64(PlayerSize)/2 {
-			g.ChangeScene(scenes.GameOverSceneID)
-			g.logger.Info("Game over: Aliens reached the bottom")
-			return
-		}
-	}
-
-	if g.player.lives <= 0 {
-		g.ChangeScene(scenes.GameOverSceneID)
-		g.logger.Info("Game over: Player out of lives")
-	}
-}
-
-// Helper functions
-
-func checkCollision(pos1, pos2 Vector2D, size1, size2 float64) bool {
-	return abs(pos1.X-pos2.X) < (size1+size2)/2 && abs(pos1.Y-pos2.Y) < (size1+size2)/2
-}
-
-func clamp(value, min, max float64) float64 {
-	if value < min {
-		return min
-	}
-	if value > max {
-		return max
-	}
-	return value
-}
-
-func abs(x float64) float64 {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
 
 // FireBullet creates a new bullet from the player's position
 func (g *Game) FireBullet() {
@@ -325,8 +193,8 @@ func (g *Game) updateScore(points int) {
 	g.logger.Info("Score updated", "score", g.score)
 }
 
-// startNewGame initializes a new game
-func (g *Game) startNewGame() {
+// StartNewGame initializes a new game
+func (g *Game) StartNewGame() {
 	g.logger.Info("Starting new game")
 	g.score = 0
 	g.currentLevel = 0
@@ -335,8 +203,8 @@ func (g *Game) startNewGame() {
 	g.initializeLevel()
 }
 
-// movePlayer updates the player's position based on the given direction
-func (g *Game) movePlayer(dx, dy int) {
+// MovePlayer updates the player's position based on the given direction
+func (g *Game) MovePlayer(dx, dy int) {
 	newX := g.player.Position.X + float64(dx)*g.player.Speed
 	newY := g.player.Position.Y + float64(dy)*g.player.Speed
 
@@ -437,38 +305,25 @@ func (g *Game) initializeLevel() {
 		"bulletSpeed", g.bulletSpeed)
 }
 
-// ChangeScene changes the current scene
-func (g *Game) ChangeScene(sceneID scenes.SceneID) {
-	g.sceneManager.ChangeScene(sceneID)
+// Helper functions
+
+func checkCollision(pos1, pos2 Vector2D, size1, size2 float64) bool {
+	return abs(pos1.X-pos2.X) < (size1+size2)/2 && abs(pos1.Y-pos2.Y) < (size1+size2)/2
 }
 
-// Implement the GameInterface methods
-func (g *Game) Width() int {
-	return g.width
+func clamp(value, min, max float64) float64 {
+	if value < min {
+		return min
+	}
+	if value > max {
+		return max
+	}
+	return value
 }
 
-func (g *Game) Height() int {
-	return g.height
-}
-
-func (g *Game) Logger() *slog.Logger {
-	return g.logger
-}
-
-func (g *Game) StartNewGame() {
-	g.score = 0
-	g.currentLevel = 0
-	g.player.lives = 3
-	g.bulletSpeed = BulletSpeed
-	g.initializeLevel()
-}
-
-// Add this method to the Game struct
-func (g *Game) GetScore() int {
-	return g.score
-}
-
-// Update the MovePlayer method to match the interface
-func (g *Game) MovePlayer(dx, dy int) {
-	g.movePlayer(dx, dy)
+func abs(x float64) float64 {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
