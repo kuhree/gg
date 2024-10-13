@@ -12,9 +12,9 @@ const (
 	PlayingSceneID
 	GameOverSceneID
 	PauseMenuSceneID
+	SettingsMenuSceneID
 )
 
-// Add this interface definition
 type Scene interface {
 	Enter()
 	Exit()
@@ -28,7 +28,6 @@ type Manager struct {
 	currentScene Scene
 }
 
-// Update the NewManager function
 func NewManager() *Manager {
 	return &Manager{
 		scenes: make(map[SceneID]Scene),
