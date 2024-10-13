@@ -67,10 +67,9 @@ type Barrier struct {
 
 // Game represents the Space Invaders game state and logic
 type Game struct {
-	renderer     *render.Renderer
-	logger       *slog.Logger
-	inputHandler *core.InputHandler
-	state        GameState
+	renderer *render.Renderer
+	logger   *slog.Logger
+	state    GameState
 
 	score    int
 	level    int
@@ -98,35 +97,34 @@ type Game struct {
 }
 
 const (
-	PlayerSpeed  = 200
-	BulletSpeed  = 300
-	AlienSpeed   = 50
-	PlayerSize   = 30
-	AlienSize    = 30
-	BulletSize   = 5
-	BarrierSize  = 60
+	PlayerSpeed = 30
+	BulletSpeed = 60
+	AlienSpeed  = 10
+	PlayerSize  = 1
+	AlienSize   = 2
+	BulletSize  = 1
+	BarrierSize = 3
 )
 
 // NewGame creates a new instance of the Space Invaders game
-func NewGame(renderer *render.Renderer, logger *slog.Logger, inputHandler *core.InputHandler) *Game {
+func NewGame(renderer *render.Renderer, logger *slog.Logger) *Game {
 	width, height := renderer.Size()
 
 	return &Game{
-		renderer:     renderer,
-		logger:       logger,
-		inputHandler: inputHandler,
-		state:        MainMenu, // Start at MainMenu instead of Playing
-		lastTime:     time.Now(),
-		width:        width,
-		height:       height,
+		renderer: renderer,
+		logger:   logger,
+		state:    MainMenu,
+		lastTime: time.Now(),
+		width:    width,
+		height:   height,
 		player: &Player{
 			Entity: Entity{
-				Position: Vector2D{X: float64(width) / 2, Y: float64(height) - 50},
+				Position: Vector2D{X: float64(width) / 2, Y: float64(height) - 3}, // Player starts at the bottom
 				Speed:    PlayerSpeed,
 			},
 			lives: 3,
 		},
-		blinkInterval:  0.5, // Blink every 0.5 seconds
+		blinkInterval:  0.5,
 		showPressEnter: true,
 	}
 }
@@ -139,6 +137,7 @@ func (g *Game) Init() error {
 
 // Cleanup performs any necessary cleanup
 func (g *Game) Cleanup() {
+	g.state = GameOver
 	g.logger.Info("Space Invaders game cleaned up")
 }
 
@@ -170,26 +169,26 @@ func (g *Game) drawMainMenu() {
 // drawPlaying handles the drawing logic for the playing state
 func (g *Game) drawPlaying() {
 	// Draw player
-	g.renderer.DrawRect(int(g.player.Position.X), int(g.player.Position.Y), int(PlayerSize), int(PlayerSize), '+')
+	g.renderer.DrawRect(int(g.player.Position.X-float64(PlayerSize)/2), int(g.player.Position.Y-float64(PlayerSize)/2), PlayerSize, PlayerSize, 'P')
 
 	// Draw aliens
 	for _, alien := range g.aliens {
-		g.renderer.DrawRect(int(alien.Position.X), int(alien.Position.Y), int(AlienSize), int(AlienSize), '+')
+		g.renderer.DrawRect(int(alien.Position.X-float64(AlienSize)/2), int(alien.Position.Y-float64(AlienSize)/2), AlienSize, AlienSize, 'A')
 	}
 
 	// Draw bullets
 	for _, bullet := range g.bullets {
-		g.renderer.DrawRect(int(bullet.Position.X), int(bullet.Position.Y), int(BulletSize), int(BulletSize), '+')
+		g.renderer.DrawRect(int(bullet.Position.X-float64(BulletSize)/2), int(bullet.Position.Y-float64(BulletSize)/2), BulletSize, BulletSize, '*')
 	}
 
 	// Draw barriers
 	for _, barrier := range g.barriers {
-		g.renderer.DrawRect(int(barrier.Position.X), int(barrier.Position.Y), int(BarrierSize), int(BarrierSize), '+')
+		g.renderer.DrawRect(int(barrier.Position.X-float64(BarrierSize)/2), int(barrier.Position.Y-float64(BarrierSize)/2), BarrierSize, BarrierSize, '+')
 	}
 
 	// Draw score and lives
-	g.renderer.DrawText(fmt.Sprintf("Score: %d", g.score), 10, 10)
-	g.renderer.DrawText(fmt.Sprintf("Lives: %d", g.player.lives), g.width-10, 10)
+	g.renderer.DrawText(fmt.Sprintf("Score: %d", g.score), 1, 1)
+	g.renderer.DrawText(fmt.Sprintf("Lives: %d", g.player.lives), g.width-10, 1)
 }
 
 // drawGameOver handles the drawing logic for the game over screen
@@ -218,6 +217,7 @@ func (g *Game) Update(dt float64) error {
 	case PauseMenu:
 		g.updatePauseMenu(dt)
 	}
+
 	return nil
 }
 
@@ -235,7 +235,6 @@ func (g *Game) updateMainMenu(dt float64) {
 // updatePlaying handles the update logic for the playing state
 func (g *Game) updatePlaying(dt float64) {
 	g.logger.Debug("Updating playing state")
-	g.movePlayer(dt)
 	g.moveAliens(dt)
 	g.moveBullets(dt)
 	g.checkCollisions()
@@ -267,49 +266,74 @@ func (g *Game) updatePauseMenu(dt float64) {
 
 // HandleInput processes user input
 func (g *Game) HandleInput(input core.InputEvent) error {
-	g.logger.Debug("Handling input", "type", input.Type, "key", input.Key)
+	if input.Err != nil {
+		g.logger.Warn("Failed to handle input", "err", input.Err)
+		return input.Err
+	}
+
+	g.logger.Debug("Handling input", "key", input.Key, "rune", input.Rune)
+
+	if input.Key == core.KeyEscape {
+		g.state = GameOver
+		return core.ErrQuitGame
+	}
+
 	switch g.state {
 	case MainMenu:
-		if input.Type == core.KeyPress && input.Key == core.KeyEnter {
-			g.startNewGame()
+		if input.Key == core.KeyEnter {
+			g.reset()
 		}
 	case Playing:
-		return g.handlePlayingInput(input)
-	case GameOver:
-		if input.Type == core.KeyPress && input.Key == core.KeyEnter {
-			g.startNewGame()
-		}
-	case PauseMenu:
-		if input.Type == core.KeyPress && input.Key == core.KeyBackspace {
-			g.state = Playing
-			g.logger.Info("Game resumed")
-		}
-	}
-	return nil
-}
-
-// handlePlayingInput processes user input during the playing state
-func (g *Game) handlePlayingInput(input core.InputEvent) error {
-	if input.Type == core.KeyPress {
 		switch input.Key {
 		case core.KeySpace:
 			g.fireBullet()
 		case core.KeyBackspace:
 			g.state = PauseMenu
 			g.logger.Info("Game paused")
+		case core.KeyLeft:
+			g.player.Position.X -= g.player.Speed
+			g.player.Position.X = clamp(g.player.Position.X, float64(PlayerSize)/2, float64(g.width)-float64(PlayerSize)/2)
+			g.logger.Debug("Player moved left", "newX", g.player.Position.X)
+		case core.KeyRight:
+			g.player.Position.X += g.player.Speed
+			g.player.Position.X = clamp(g.player.Position.X, float64(PlayerSize)/2, float64(g.width)-float64(PlayerSize)/2)
+			g.logger.Debug("Player moved right", "newX", g.player.Position.X)
+		case core.KeyUp:
+			g.player.Position.Y -= g.player.Speed
+			g.player.Position.Y = clamp(g.player.Position.Y, float64(PlayerSize)/2, float64(g.height)-float64(PlayerSize)/2)
+			g.logger.Debug("Player moved up", "newY", g.player.Position.Y)
+		case core.KeyDown:
+			g.player.Position.Y += g.player.Speed
+			g.player.Position.Y = clamp(g.player.Position.Y, float64(PlayerSize)/2, float64(g.height)-float64(PlayerSize)/2)
+			g.logger.Debug("Player moved down", "newY", g.player.Position.Y)
+		}
+	case GameOver:
+		if input.Key == core.KeyEnter {
+			g.reset()
+		}
+	case PauseMenu:
+		if input.Key == core.KeyBackspace {
+			g.state = Playing
+			g.logger.Info("Game resumed")
 		}
 	}
+
 	return nil
 }
 
 // spawnAliens creates a new wave of aliens
 func (g *Game) spawnAliens() {
 	const (
-		rows         = 5
-		aliensPerRow = 11
-		xPadding     = 50
-		yPadding     = 50
+		rows         = 2
+		aliensPerRow = 3
+		xMargin      = 2.0 // Margin from the sides of the screen
+		yMargin      = 2.0 // Margin from the top of the screen
+		xSpacing     = 2.0 // Horizontal space between aliens
+		ySpacing     = 2.0 // Vertical space between aliens
 	)
+
+	alienWidth := (float64(g.width) - 2*xMargin - float64(aliensPerRow-1)*xSpacing) / float64(aliensPerRow)
+	alienHeight := 1.0 // Set alien height to 1 unit
 
 	for row := 0; row < rows; row++ {
 		for col := 0; col < aliensPerRow; col++ {
@@ -317,8 +341,8 @@ func (g *Game) spawnAliens() {
 			alien := &Alien{
 				Entity: Entity{
 					Position: Vector2D{
-						X: float64(col*xPadding) + xPadding,
-						Y: float64(row*yPadding) + yPadding,
+						X: xMargin + float64(col)*(alienWidth+xSpacing) + alienWidth/2,
+						Y: yMargin + float64(row)*(alienHeight+ySpacing) + alienHeight/2,
 					},
 					Speed: AlienSpeed,
 				},
@@ -328,23 +352,23 @@ func (g *Game) spawnAliens() {
 			g.aliens = append(g.aliens, alien)
 		}
 	}
-	g.logger.Info("Spawned new wave of aliens", "level", g.level)
+	g.logger.Info("Spawned new wave of aliens", "level", g.level, "count", len(g.aliens))
 }
 
 // createBarriers initializes the defensive barriers
 func (g *Game) createBarriers() {
 	const (
-		barrierCount = 4
-		barrierWidth = 60
-		barrierY     = 150 // Distance from bottom
+		barrierCount = 3
+		barrierWidth = 5
+		barrierY     = 5 // Distance from bottom
 	)
 
 	for i := 0; i < barrierCount; i++ {
 		barrier := &Barrier{
 			Entity: Entity{
 				Position: Vector2D{
-					X: float64(i+1)*(float64(g.width)/(barrierCount+1)) - barrierWidth/2,
-					Y: float64(g.height) - barrierY,
+					X: float64(i+1)*(float64(g.width)/(barrierCount+1)) - float64(barrierWidth)/2,
+					Y: float64(g.height) - float64(barrierY),
 				},
 			},
 			Health: 4,
@@ -357,18 +381,40 @@ func (g *Game) createBarriers() {
 // moveAliens updates the positions of all aliens
 func (g *Game) moveAliens(dt float64) {
 	moveDown := false
+	alienWidth := float64(AlienSize)
+	// moveDistance := AlienSpeed * dt
+
+	// Check if any alien has reached the screen edges
 	for _, alien := range g.aliens {
-		alien.Position.X += alien.Speed * dt
-		if alien.Position.X <= 0 || alien.Position.X >= float64(g.width) {
+		if (alien.Speed > 0 && alien.Position.X+alienWidth/2 >= float64(g.width)) ||
+			(alien.Speed < 0 && alien.Position.X-alienWidth/2 <= 0) {
 			moveDown = true
+			break
 		}
 	}
 
 	if moveDown {
-		g.logger.Debug("Aliens moving down")
+		// Reverse direction and move down
 		for _, alien := range g.aliens {
 			alien.Speed = -alien.Speed
-			alien.Position.Y += 10
+			alien.Position.Y += alienWidth / 2 // Move down by half the alien width
+		}
+		g.logger.Debug("Aliens moving down and reversing direction")
+	} else {
+		// Move horizontally
+		for _, alien := range g.aliens {
+			alien.Position.X += alien.Speed * dt
+		}
+	}
+
+	// Increase speed slightly each time aliens move down
+	if moveDown {
+		for _, alien := range g.aliens {
+			if alien.Speed > 0 {
+				alien.Speed += 1
+			} else {
+				alien.Speed -= 1
+			}
 		}
 	}
 }
@@ -378,7 +424,7 @@ func (g *Game) moveBullets(dt float64) {
 	initialCount := len(g.bullets)
 	for i := len(g.bullets) - 1; i >= 0; i-- {
 		bullet := g.bullets[i]
-		bullet.Position.Y -= bullet.Speed * dt
+		bullet.Position.Y -= bullet.Speed * dt // Bullets move upwards
 
 		// Remove bullets that are off-screen
 		if bullet.Position.Y < 0 {
@@ -451,7 +497,7 @@ func (g *Game) checkGameOver() {
 	}
 
 	for _, alien := range g.aliens {
-		if alien.Position.Y >= g.player.Position.Y {
+		if alien.Position.Y+float64(AlienSize)/2 >= g.player.Position.Y-float64(PlayerSize)/2 {
 			g.state = GameOver
 			g.logger.Info("Game over: Aliens reached the bottom")
 			return
@@ -487,33 +533,11 @@ func abs(x float64) float64 {
 	return x
 }
 
-// movePlayer updates the player's position based on input
-func (g *Game) movePlayer(dt float64) {
-	initialX := g.player.Position.X
-	for _, event := range g.inputHandler.PollEvents() {
-		if event.Type == core.KeyPress {
-			switch event.Key {
-			case core.KeyLeft:
-				g.player.Position.X -= g.player.Speed * dt
-			case core.KeyRight:
-				g.player.Position.X += g.player.Speed * dt
-			}
-		}
-	}
-
-	// Clamp player position to screen bounds
-	g.player.Position.X = clamp(g.player.Position.X, PlayerSize/2, float64(g.width)-PlayerSize/2)
-
-	if g.player.Position.X != initialX {
-		g.logger.Debug("Player moved", "newX", g.player.Position.X)
-	}
-}
-
 // fireBullet creates a new bullet from the player's position
 func (g *Game) fireBullet() {
 	bullet := &Bullet{
 		Entity: Entity{
-			Position: Vector2D{X: g.player.Position.X, Y: g.player.Position.Y - 10},
+			Position: Vector2D{X: g.player.Position.X, Y: g.player.Position.Y - float64(PlayerSize)/2},
 			Speed:    BulletSpeed,
 		},
 		Damage: 1,
@@ -528,13 +552,13 @@ func (g *Game) updateScore(points int) {
 	g.logger.Info("Score updated", "score", g.score)
 }
 
-// startNewGame initializes a new game
-func (g *Game) startNewGame() {
+// reset initializes a new game
+func (g *Game) reset() {
 	g.logger.Info("Starting new game")
 	g.score = 0
 	g.level = 1
 	g.player.lives = 3
-	g.player.Position.X = float64(g.width) / 2
+	g.player.Position = Vector2D{X: float64(g.width) / 2, Y: float64(g.height) - 3}
 	g.aliens = nil
 	g.bullets = nil
 	g.barriers = nil

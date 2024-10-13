@@ -45,7 +45,7 @@ func (g *Game) Draw() {
 
 // HandleInput processes user input
 func (g *Game) HandleInput(input core.InputEvent) error {
-	if input.Type == core.KeyPress && input.Key == core.KeyBackspace {
+	if  input.Key == core.KeyBackspace {
 		return core.ErrQuitGame
 	}
 	return nil

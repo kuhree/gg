@@ -33,19 +33,17 @@ var games = []struct {
 }{
 	{"Frames", func() error {
 		renderer := render.NewRenderer(80, 24) // Create a 80x24 ASCII renderer
-		inputHandler := core.NewInputHandler()
 		game := frames.NewGame(renderer, utils.Logger)
 
-		gameLoop := core.NewGameLoop(game, renderer, inputHandler, utils.Logger)
+		gameLoop := core.NewGameLoop(game, renderer, utils.Logger)
 		return gameLoop.Run()
 	}},
 
 	{"Space Invaders", func() error {
 		renderer := render.NewRenderer(80, 24) // Create a 80x24 ASCII renderer
-		inputHandler := core.NewInputHandler()
-		game := space_invaders.NewGame(renderer, utils.Logger, inputHandler)
+		game := space_invaders.NewGame(renderer, utils.Logger, )
 
-		gameLoop := core.NewGameLoop(game, renderer, inputHandler, utils.Logger)
+		gameLoop := core.NewGameLoop(game, renderer, utils.Logger)
 		return gameLoop.Run()
 	}},
 	{"Pong", notImplemented},
