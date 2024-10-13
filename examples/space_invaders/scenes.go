@@ -3,9 +3,9 @@ package space_invaders
 import (
 	"fmt"
 
-	"github.com/kuhree/gg/examples/space_invaders/scenes"
 	"github.com/kuhree/gg/internal/engine/core"
 	"github.com/kuhree/gg/internal/engine/render"
+	"github.com/kuhree/gg/internal/engine/scenes"
 )
 
 // BaseScene provides common functionality for all scenes
