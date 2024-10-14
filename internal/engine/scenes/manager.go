@@ -7,14 +7,6 @@ import (
 
 type SceneID int
 
-const (
-	MainMenuSceneID SceneID = iota
-	PlayingSceneID
-	GameOverSceneID
-	PauseMenuSceneID
-	SettingsMenuSceneID
-)
-
 type Scene interface {
 	Enter()
 	Exit()

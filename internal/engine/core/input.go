@@ -32,7 +32,6 @@ const (
 	KeyA = rune(97)
 	KeyS = rune(115)
 	KeyD = rune(100)
-
 )
 
 // InputEvent represents an input event from the user

@@ -14,7 +14,7 @@ func init() {
 
 // SetLogLevel sets the log level for the logger
 func SetLogLevel(level slog.Level) {
-	logFile, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	logFile, err := os.OpenFile("gg.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -23,6 +23,7 @@ func SetLogLevel(level slog.Level) {
 	opts := &slog.HandlerOptions{
 		Level: level,
 	}
+
 	handler := slog.NewTextHandler(multiWriter, opts)
 	Logger = slog.New(handler)
 	slog.SetDefault(Logger)

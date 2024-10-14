@@ -21,15 +21,17 @@ GG is a bunch of classic games written in Go. It's designed to create classic ar
 The `examples/` directory contains implementations of classic 2D games, including:
 
 1. Space Invaders
-2. Pong
-3. Tetris
-4. Pac-Man
-5. Snake
-6. Breakout
-7. Asteroids
-8. Frogger
-9. Galaga
-10. Centipede
+2. Pong\*
+3. Tetris\*
+4. Pac-Man\*
+5. Snake\*
+6. Breakout\*
+7. Asteroids\*
+8. Frogger\*
+9. Galaga\*
+10. Centipede\*
+
+> \*Not yet implemented
 
 ## Project Goals
 

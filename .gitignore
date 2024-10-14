@@ -21,6 +21,7 @@ tmp/
 # IDE specific files
 .vscode
 .cursor*
+.aider*
 .idea
 
 # .env file

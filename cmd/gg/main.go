@@ -9,18 +9,23 @@ import (
 	"github.com/kuhree/gg/examples/frames"
 	"github.com/kuhree/gg/examples/space_invaders"
 	"github.com/kuhree/gg/internal/engine/core"
-	"github.com/kuhree/gg/internal/engine/render"
 	"github.com/kuhree/gg/internal/utils"
 )
 
 var (
+	height   int
+	width    int
 	debug    bool
+	workDir  string
 	gameName string
 )
 
 func init() {
 	flag.BoolVar(&debug, "debug", false, "Enable Debug logging default")
 	flag.StringVar(&gameName, "game", "", "Name of the game to launch")
+	flag.StringVar(&workDir, "workDir", "./tmp", "Working directory for the game state")
+	flag.IntVar(&width, "width", 80, "width of the game")
+	flag.IntVar(&height, "height", 24, "height of the game")
 }
 
 func notImplemented() error {
@@ -32,18 +37,16 @@ var games = []struct {
 	launch func() error
 }{
 	{"Frames", func() error {
-		renderer := render.NewRenderer(80, 24) // Create a 80x24 ASCII renderer
-		game := frames.NewGame(renderer, utils.Logger)
+		game := frames.NewGame(width, height)
 
-		gameLoop := core.NewGameLoop(game, renderer, utils.Logger)
+		gameLoop := core.NewGameLoop(game)
 		return gameLoop.Run()
 	}},
 
 	{"Space Invaders", func() error {
-		renderer := render.NewRenderer(80, 24) // Create a 80x24 ASCII renderer
-		game := space_invaders.NewGame(renderer, utils.Logger)
+		game := space_invaders.NewGame(width, height, workDir, debug)
 
-		gameLoop := core.NewGameLoop(game, renderer, utils.Logger)
+		gameLoop := core.NewGameLoop(game)
 		return gameLoop.Run()
 	}},
 	{"Pong", notImplemented},
@@ -72,7 +75,7 @@ func main() {
 }
 
 func launchGame(gameName string) {
-	utils.Logger.Info("Launching game", "name", gameName, "devMode", debug)
+	utils.Logger.Info("Launching game", "name", gameName)
 
 	for _, game := range games {
 		if game.name == gameName {
