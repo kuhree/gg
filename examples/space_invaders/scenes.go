@@ -1,7 +1,9 @@
 package space_invaders
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/kuhree/gg/internal/engine/core"
 	"github.com/kuhree/gg/internal/engine/render"
@@ -108,10 +110,14 @@ func (s *MainMenuScene) Update(dt float64) {
 }
 
 func (s *MainMenuScene) Draw(renderer *render.Renderer) {
-	renderer.DrawText("SPACE INVADERS", s.game.width/2, s.game.height/3)
+	centerX := s.game.width / 2
+	renderer.DrawText("SPACE INVADERS", centerX, s.game.height/4)
 	if s.showPressEnter {
-		renderer.DrawText("Press ENTER to start", s.game.width/2, s.game.height/2)
+		renderer.DrawText("Press ENTER to start", centerX, s.game.height/2)
 	}
+	renderer.DrawText("Controls:", centerX, 2*s.game.height/3)
+	renderer.DrawText("Arrow keys / WASD to move", centerX, 2*s.game.height/3+2)
+	renderer.DrawText("SPACE to shoot", centerX, 2*s.game.height/3+4)
 }
 
 func (s *MainMenuScene) HandleInput(input core.InputEvent) error {
@@ -186,6 +192,55 @@ func (s *PlayingScene) moveBullets(dt float64) {
 	}
 }
 
+// movePlayer updates the player's position based on the given direction
+func (s *PlayingScene) movePlayer(dx, dy int) {
+	newX := s.game.player.Position.X + float64(dx)*s.game.player.Speed
+	newY := s.game.player.Position.Y + float64(dy)*s.game.player.Speed
+
+	// Clamp the player's position to stay within the game boundaries
+	newX = clamp(newX, float64(PlayerSize)/2, float64(s.game.width)-float64(PlayerSize)/2)
+	newY = clamp(newY, float64(PlayerSize)/2, float64(s.game.height)-float64(PlayerSize)/2)
+
+	s.game.player.Position.X = newX
+	s.game.player.Position.Y = newY
+
+	s.game.logger.Debug("Player moved",
+		"newX", newX,
+		"newY", newY,
+		"dx", dx,
+		"dy", dy)
+}
+
+// LoadLevels loads level data from a JSON file
+func (g *Game) LoadLevels(filename string) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return fmt.Errorf("failed to open levels file: %w", err)
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&g.levels); err != nil {
+		return fmt.Errorf("failed to decode levels data: %w", err)
+	}
+
+	g.logger.Info("Levels loaded successfully", "count", len(g.levels))
+	return nil
+}
+
+// fireBullet creates a new bullet from the player's position
+func (s *PlayingScene) fireBullet() {
+	bullet := &Bullet{
+		GameObject: GameObject{
+			Position: Vector2D{X: s.game.player.Position.X, Y: s.game.player.Position.Y - float64(PlayerSize)/2},
+			Speed:    s.game.bulletSpeed,
+		},
+		Damage: 1,
+	}
+	s.game.bullets = append(s.game.bullets, bullet)
+	s.game.logger.Info("Player fired a bullet", "bulletSpeed", s.game.bulletSpeed)
+}
+
 // handleCollisions detects and handles collisions between game objects
 func (s *PlayingScene) handleCollisions() {
 	// Check bullet collisions
@@ -193,7 +248,8 @@ func (s *PlayingScene) handleCollisions() {
 		bullet := s.game.bullets[i]
 		for j, alien := range s.game.aliens {
 			if checkCollision(bullet.Position, alien.Position, BulletSize, AlienSize) {
-				s.game.updateScore(alien.Points)
+				s.game.score += alien.Points
+				s.game.logger.Info("Score updated", "score", s.game.score)
 				s.game.aliens = append(s.game.aliens[:j], s.game.aliens[j+1:]...)
 				s.game.bullets = append(s.game.bullets[:i], s.game.bullets[i+1:]...)
 				break
@@ -263,36 +319,38 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 	}
 
 	// Draw score, level, remaining enemies, and lives
-	s.game.renderer.DrawText(fmt.Sprintf("Score: %d | Level: %d | Enemies: %d", s.game.score, s.game.currentLevel+1, len(s.game.aliens)), 1, 1)
+	s.game.renderer.DrawText(fmt.Sprintf("Score: %d", s.game.score), 1, 1)
+	s.game.renderer.DrawText(fmt.Sprintf("Level: %d", s.game.currentLevel+1), 1, 2)
+	s.game.renderer.DrawText(fmt.Sprintf("Enemies: %d", len(s.game.aliens)), 1, 3)
 	s.game.renderer.DrawText(fmt.Sprintf("Lives: %d", s.game.player.lives), s.game.width-10, 1)
 }
 
 func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 	switch input.Key {
 	case core.KeySpace:
-		s.game.FireBullet()
+		s.fireBullet()
 	case core.KeyLeft:
-		s.game.MovePlayer(-1, 0)
+		s.movePlayer(-1, 0)
 	case core.KeyRight:
-		s.game.MovePlayer(1, 0)
+		s.movePlayer(1, 0)
 	case core.KeyUp:
-		s.game.MovePlayer(0, -1)
+		s.movePlayer(0, -1)
 	case core.KeyDown:
-		s.game.MovePlayer(0, 1)
+		s.movePlayer(0, 1)
 	case core.KeyEscape:
 		s.game.sceneManager.ChangeScene(scenes.PauseMenuSceneID)
 	default:
 		switch input.Rune {
 		case 'w', 'W':
-			s.game.MovePlayer(0, -1)
+			s.movePlayer(0, -1)
 		case 'a', 'A':
-			s.game.MovePlayer(-1, 0)
+			s.movePlayer(-1, 0)
 		case 's', 'S':
-			s.game.MovePlayer(0, 1)
+			s.movePlayer(0, 1)
 		case 'd', 'D':
-			s.game.MovePlayer(1, 0)
+			s.movePlayer(1, 0)
 		case ' ':
-			s.game.FireBullet()
+		s.fireBullet()
 		}
 	}
 	return nil
@@ -301,16 +359,24 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 // GameOverScene methods
 
 func (s *GameOverScene) Draw(renderer *render.Renderer) {
-	renderer.DrawText("GAME OVER", s.game.width/2, s.game.height/3)
-	renderer.DrawText(fmt.Sprintf("Final Score: %d", s.game.score), s.game.width/2, s.game.height/2)
-	renderer.DrawText(fmt.Sprintf("Final Level: %d", s.game.currentLevel), s.game.width/2, s.game.height/2)
-	renderer.DrawText(fmt.Sprintf("Enemies Remaining: %d", len(s.game.aliens)), s.game.width/2, s.game.height/2)
-	renderer.DrawText("Press ENTER to return to main menu", s.game.width/2, 2*s.game.height/3)
+	centerX := s.game.width / 2
+	renderer.DrawText("GAME OVER", centerX, s.game.height/4)
+	renderer.DrawText(fmt.Sprintf("Final Score: %d", s.game.score), centerX, s.game.height/3)
+	renderer.DrawText(fmt.Sprintf("Final Level: %d", s.game.currentLevel+1), centerX, s.game.height/2)
+	renderer.DrawText(fmt.Sprintf("Enemies Remaining: %d", len(s.game.aliens)), centerX, s.game.height/2+2)
+	renderer.DrawText("Press ENTER to return to main menu", centerX, 2*s.game.height/3)
+	renderer.DrawText("Press Q to quit the game", centerX, 2*s.game.height/3+2)
 }
 
 func (s *GameOverScene) HandleInput(input core.InputEvent) error {
 	if input.Key == core.KeyEnter {
 		s.game.sceneManager.ChangeScene(scenes.MainMenuSceneID)
+		return nil
+	}
+
+	switch input.Rune {
+	case 'q', 'Q':
+		return core.ErrQuitGame
 	}
 	return nil
 }
@@ -318,9 +384,13 @@ func (s *GameOverScene) HandleInput(input core.InputEvent) error {
 // PauseMenuScene methods
 
 func (s *PauseMenuScene) Draw(renderer *render.Renderer) {
-	renderer.DrawText("PAUSED", s.game.width/2, s.game.height/3)
-	renderer.DrawText("Press ESC to resume", s.game.width/2, s.game.height/2)
-	renderer.DrawText("Press Q to quit", s.game.width/2, 2*s.game.height/3)
+	centerX := s.game.width / 2
+	renderer.DrawText("PAUSED", centerX, s.game.height/4)
+	renderer.DrawText(fmt.Sprintf("Current Score: %d", s.game.score), centerX, s.game.height/3)
+	renderer.DrawText(fmt.Sprintf("Current Level: %d", s.game.currentLevel+1), centerX, s.game.height/3+2)
+	renderer.DrawText("Press ESC to resume", centerX, s.game.height/2)
+	renderer.DrawText("Press R to restart level", centerX, s.game.height/2+2)
+	renderer.DrawText("Press Q to quit", centerX, 2*s.game.height/3)
 }
 
 func (s *PauseMenuScene) HandleInput(input core.InputEvent) error {
@@ -330,7 +400,7 @@ func (s *PauseMenuScene) HandleInput(input core.InputEvent) error {
 	default:
 		switch input.Rune {
 		case core.KeyQ:
-			s.game.sceneManager.ChangeScene(scenes.MainMenuSceneID)
+			return core.ErrQuitGame
 		}
 	}
 	return nil
