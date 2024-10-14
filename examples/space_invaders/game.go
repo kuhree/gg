@@ -1,26 +1,13 @@
 package space_invaders
 
 import (
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"math"
-	"os"
 	"time"
 
 	"github.com/kuhree/gg/internal/engine/core"
 	"github.com/kuhree/gg/internal/engine/render"
 	"github.com/kuhree/gg/internal/engine/scenes"
-)
-
-// GameMode represents the current state of the game
-type GameMode int
-
-const (
-	MainMenu GameMode = iota
-	Playing
-	GameOver
-	PauseMenu
 )
 
 // AlienType represents different types of aliens
@@ -79,8 +66,8 @@ type LevelConfig struct {
 
 // Game represents the Space Invaders game state and logic
 type Game struct {
-	renderer *render.Renderer
-	logger   *slog.Logger
+	renderer     *render.Renderer
+	logger       *slog.Logger
 	sceneManager *scenes.Manager
 
 	score        int
@@ -174,25 +161,6 @@ func (g *Game) HandleInput(input core.InputEvent) error {
 }
 
 
-// FireBullet creates a new bullet from the player's position
-func (g *Game) FireBullet() {
-	bullet := &Bullet{
-		GameObject: GameObject{
-			Position: Vector2D{X: g.player.Position.X, Y: g.player.Position.Y - float64(PlayerSize)/2},
-			Speed:    g.bulletSpeed,
-		},
-		Damage: 1,
-	}
-	g.bullets = append(g.bullets, bullet)
-	g.logger.Info("Player fired a bullet", "bulletSpeed", g.bulletSpeed)
-}
-
-// updateScore increases the player's score
-func (g *Game) updateScore(points int) {
-	g.score += points
-	g.logger.Info("Score updated", "score", g.score)
-}
-
 // StartNewGame initializes a new game
 func (g *Game) StartNewGame() {
 	g.logger.Info("Starting new game")
@@ -203,41 +171,6 @@ func (g *Game) StartNewGame() {
 	g.initializeLevel()
 }
 
-// MovePlayer updates the player's position based on the given direction
-func (g *Game) MovePlayer(dx, dy int) {
-	newX := g.player.Position.X + float64(dx)*g.player.Speed
-	newY := g.player.Position.Y + float64(dy)*g.player.Speed
-
-	// Clamp the player's position to stay within the game boundaries
-	newX = clamp(newX, float64(PlayerSize)/2, float64(g.width)-float64(PlayerSize)/2)
-	newY = clamp(newY, float64(PlayerSize)/2, float64(g.height)-float64(PlayerSize)/2)
-
-	g.player.Position.X = newX
-	g.player.Position.Y = newY
-
-	g.logger.Debug("Player moved",
-		"newX", newX,
-		"newY", newY,
-		"dx", dx,
-		"dy", dy)
-}
-
-// LoadLevels loads level data from a JSON file
-func (g *Game) LoadLevels(filename string) error {
-	file, err := os.Open(filename)
-	if err != nil {
-		return fmt.Errorf("failed to open levels file: %w", err)
-	}
-	defer file.Close()
-
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&g.levels); err != nil {
-		return fmt.Errorf("failed to decode levels data: %w", err)
-	}
-
-	g.logger.Info("Levels loaded successfully", "count", len(g.levels))
-	return nil
-}
 
 // initializeLevel configures the game state for the current level
 func (g *Game) initializeLevel() {
@@ -258,32 +191,45 @@ func (g *Game) initializeLevel() {
 	g.bullets = nil
 	g.barriers = nil
 
-	// Calculate number of rows and aliens per row
-	aliensPerRow := int(math.Sqrt(float64(levelData.AliensCount)))
-	alienRows := (levelData.AliensCount + aliensPerRow - 1) / aliensPerRow
+	// Choose a formation based on the current level
+	formation := g.currentLevel % 4
 
-	// Setup aliens
-	alienWidth := (float64(g.width) - 4.0 - float64(aliensPerRow-1)*2.0) / float64(aliensPerRow)
-	alienHeight := 1.0
+	alienWidth := float64(AlienSize)
+	alienHeight := float64(AlienSize)
 
-	alienCount := 0
-	for row := 0; row < alienRows && alienCount < levelData.AliensCount; row++ {
-		for col := 0; col < aliensPerRow && alienCount < levelData.AliensCount; col++ {
-			alienType := AlienType(row / 2)
-			alien := &Alien{
-				GameObject: GameObject{
-					Position: Vector2D{
-						X: 2.0 + float64(col)*(alienWidth+2.0) + alienWidth/2,
-						Y: 2.0 + float64(row)*(alienHeight+2.0) + alienHeight/2,
-					},
-					Speed: levelData.AlienSpeed,
-				},
-				Type:   alienType,
-				Points: (3 - int(alienType)) * 10,
-			}
-			g.aliens = append(g.aliens, alien)
-			alienCount++
+	var alienPositions []Vector2D
+
+	switch formation {
+	case 0:
+		alienPositions = g.getRectangleFormation(levelData.AliensCount, alienWidth, alienHeight)
+	case 1:
+		alienPositions = g.getTriangleFormation(levelData.AliensCount, alienWidth, alienHeight)
+	case 2:
+		alienPositions = g.getDiamondFormation(levelData.AliensCount, alienWidth, alienHeight)
+	case 3:
+		alienPositions = g.getVFormation(levelData.AliensCount, alienWidth, alienHeight)
+	}
+
+	// Spawn aliens based on the calculated positions
+	for i, pos := range alienPositions {
+		if i >= levelData.AliensCount {
+			break
 		}
+		var alienType AlienType
+		if levelData.AliensCount >= 3 {
+			alienType = AlienType(i / (levelData.AliensCount / 3))
+		} else {
+			alienType = AlienType(i % 3)
+		}
+		alien := &Alien{
+			GameObject: GameObject{
+				Position: pos,
+				Speed:    levelData.AlienSpeed,
+			},
+			Type:   alienType,
+			Points: (3 - int(alienType)) * 10,
+		}
+		g.aliens = append(g.aliens, alien)
 	}
 
 	// Setup barriers
@@ -291,7 +237,7 @@ func (g *Game) initializeLevel() {
 		barrier := &Barrier{
 			GameObject: GameObject{
 				Position: Vector2D{
-					X: float64(i+1)*(float64(g.width)/(float64(levelData.BarrierCount)+1)) - float64(BarrierSize)/2,
+					X: float64(i+1) * (float64(g.width) / (float64(levelData.BarrierCount) + 1)),
 					Y: float64(g.height) - 5,
 				},
 			},
@@ -306,17 +252,102 @@ func (g *Game) initializeLevel() {
 	g.logger.Info("Level setup complete",
 		"level", g.currentLevel+1,
 		"aliens", len(g.aliens),
-		"aliensPerRow", aliensPerRow,
-		"alienRows", alienRows,
 		"barriers", len(g.barriers),
 		"alienSpeed", levelData.AlienSpeed,
-		"bulletSpeed", g.bulletSpeed)
+		"bulletSpeed", g.bulletSpeed,
+		"formation", formation)
+}
+
+func (g *Game) getRectangleFormation(count int, alienWidth, alienHeight float64) []Vector2D {
+	var positions []Vector2D
+	rows := 5
+	cols := count / rows
+	if cols == 0 {
+		cols = 1
+	}
+
+	startX := (float64(g.width) - float64(cols)*alienWidth) / 2
+	startY := 2.0
+
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
+			positions = append(positions, Vector2D{
+				X: startX + float64(col)*(alienWidth+1),
+				Y: startY + float64(row)*(alienHeight+1),
+			})
+		}
+	}
+
+	return positions
+}
+
+func (g *Game) getTriangleFormation(count int, alienWidth, alienHeight float64) []Vector2D {
+	var positions []Vector2D
+	maxRows := 5
+	maxCols := maxRows
+
+	startX := (float64(g.width) - float64(maxCols)*alienWidth) / 2
+	startY := 2.0
+
+	for row := 0; row < maxRows && len(positions) < count; row++ {
+		cols := row + 1
+		for col := 0; col < cols && len(positions) < count; col++ {
+			positions = append(positions, Vector2D{
+				X: startX + float64(maxCols-cols)/2*alienWidth + float64(col)*(alienWidth+1),
+				Y: startY + float64(row)*(alienHeight+1),
+			})
+		}
+	}
+
+	return positions
+}
+
+func (g *Game) getDiamondFormation(count int, alienWidth, alienHeight float64) []Vector2D {
+	var positions []Vector2D
+	maxRows := 7
+	maxCols := 4
+
+	startX := (float64(g.width) - float64(maxCols)*alienWidth) / 2
+	startY := 2.0
+
+	for row := 0; row < maxRows && len(positions) < count; row++ {
+		cols := maxCols - abs(row-3)
+		for col := 0; col < cols && len(positions) < count; col++ {
+			positions = append(positions, Vector2D{
+				X: startX + float64(maxCols-cols)/2*alienWidth + float64(col)*(alienWidth+1),
+				Y: startY + float64(row)*(alienHeight+1),
+			})
+		}
+	}
+
+	return positions
+}
+
+func (g *Game) getVFormation(count int, alienWidth, alienHeight float64) []Vector2D {
+	var positions []Vector2D
+	maxRows := 5
+	maxCols := maxRows*2 - 1
+
+	startX := (float64(g.width) - float64(maxCols)*alienWidth) / 2
+	startY := 2.0
+
+	for row := 0; row < maxRows && len(positions) < count; row++ {
+		cols := 2*row + 1
+		for col := 0; col < cols && len(positions) < count; col++ {
+			positions = append(positions, Vector2D{
+				X: startX + float64(row)*alienWidth + float64(col)*(alienWidth+1),
+				Y: startY + float64(row)*(alienHeight+1),
+			})
+		}
+	}
+
+	return positions
 }
 
 // Helper functions
 
 func checkCollision(pos1, pos2 Vector2D, size1, size2 float64) bool {
-	return abs(pos1.X-pos2.X) < (size1+size2)/2 && abs(pos1.Y-pos2.Y) < (size1+size2)/2
+	return int(math.Abs(float64(pos1.X-pos2.X))) < int((size1+size2)/2) && int(math.Abs(float64(pos1.Y-pos2.Y))) < int((size1+size2)/2)
 }
 
 func clamp(value, min, max float64) float64 {
@@ -329,7 +360,7 @@ func clamp(value, min, max float64) float64 {
 	return value
 }
 
-func abs(x float64) float64 {
+func abs(x int) int {
 	if x < 0 {
 		return -x
 	}
