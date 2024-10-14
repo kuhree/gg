@@ -197,18 +197,7 @@ func (g *Game) initializeLevel() {
 	alienWidth := float64(AlienSize)
 	alienHeight := float64(AlienSize)
 
-	var alienPositions []Vector2D
-
-	switch formation {
-	case 0:
-		alienPositions = g.getRectangleFormation(levelData.AliensCount, alienWidth, alienHeight)
-	case 1:
-		alienPositions = g.getTriangleFormation(levelData.AliensCount, alienWidth, alienHeight)
-	case 2:
-		alienPositions = g.getDiamondFormation(levelData.AliensCount, alienWidth, alienHeight)
-	case 3:
-		alienPositions = g.getVFormation(levelData.AliensCount, alienWidth, alienHeight)
-	}
+	alienPositions := g.getGroupedFormations(levelData.AliensCount, alienWidth, alienHeight)
 
 	// Spawn aliens based on the calculated positions
 	for i, pos := range alienPositions {
@@ -258,19 +247,99 @@ func (g *Game) initializeLevel() {
 		"formation", formation)
 }
 
-func (g *Game) getRectangleFormation(count int, alienWidth, alienHeight float64) []Vector2D {
+// getGroupedFormations creates groups of mini formations and sprinkles in overflow
+func (g *Game) getGroupedFormations(count int, alienWidth, alienHeight float64) []Vector2D {
+	const (
+		miniFormationSize = 4 // Size of each mini formation
+		spacing           = 2.0 // Spacing between mini formations
+	)
+
 	var positions []Vector2D
-	rows := 5
-	cols := count / rows
-	if cols == 0 {
-		cols = 1
+	remainingAliens := count
+
+	// Calculate number of complete mini formations
+	numCompleteMiniFormations := remainingAliens / miniFormationSize
+
+	// Calculate available width and height for formations
+	formationWidth := 4*alienWidth + spacing
+	formationHeight := 4*alienHeight + spacing
+
+	// Calculate max formations per row and total rows
+	formationsPerRow := int(float64(g.width) / formationWidth)
+	if formationsPerRow == 0 {
+		formationsPerRow = 1
+	}
+	totalRows := (numCompleteMiniFormations + formationsPerRow - 1) / formationsPerRow
+
+	// Calculate start position to center the formations
+	startX := (float64(g.width) - float64(formationsPerRow)*formationWidth + spacing) / 2
+	startY := (float64(g.height) - float64(totalRows)*formationHeight) / 2
+
+	for i := 0; i < numCompleteMiniFormations; i++ {
+		formation := i % 4
+		miniPositions := g.getMiniFormation(formation, miniFormationSize, alienWidth, alienHeight)
+
+		// Calculate position for this mini formation
+		col := i % formationsPerRow
+		row := i / formationsPerRow
+		offsetX := startX + float64(col) * formationWidth
+		offsetY := startY + float64(row) * formationHeight
+
+		// Adjust positions and add to main list
+		for _, pos := range miniPositions {
+			pos.X += offsetX
+			pos.Y += offsetY
+			positions = append(positions, pos)
+		}
+
+		remainingAliens -= miniFormationSize
 	}
 
-	startX := (float64(g.width) - float64(cols)*alienWidth) / 2
-	startY := 2.0
+	// Handle overflow
+	if remainingAliens > 0 {
+		overflowStartX := startX + float64(numCompleteMiniFormations%formationsPerRow) * formationWidth
+		overflowStartY := startY + float64(numCompleteMiniFormations/formationsPerRow) * formationHeight
 
-	for row := 0; row < rows; row++ {
-		for col := 0; col < cols; col++ {
+		for i := 0; i < remainingAliens; i++ {
+			col := i % 4
+			row := i / 4
+			positions = append(positions, Vector2D{
+				X: overflowStartX + float64(col)*(alienWidth+1),
+				Y: overflowStartY + float64(row)*(alienHeight+1),
+			})
+		}
+	}
+
+	return positions
+}
+
+// getMiniFormation returns a small formation of the specified type
+func (g *Game) getMiniFormation(formationType, count int, alienWidth, alienHeight float64) []Vector2D {
+	switch formationType {
+	case 0:
+		return g.getRectangleFormation(count, alienWidth, alienHeight)
+	case 1:
+		return g.getTriangleFormation(count, alienWidth, alienHeight)
+	case 2:
+		return g.getDiamondFormation(count, alienWidth, alienHeight)
+	case 3:
+		return g.getVFormation(count, alienWidth, alienHeight)
+	default:
+		return g.getRectangleFormation(count, alienWidth, alienHeight)
+	}
+}
+
+// Modify existing formation functions to work with smaller counts
+func (g *Game) getRectangleFormation(count int, alienWidth, alienHeight float64) []Vector2D {
+	var positions []Vector2D
+	rows := int(math.Min(float64(count/2+1), 2))
+	cols := int(math.Min(float64(count/rows+1), 2))
+
+	startX := -float64(cols-1) * (alienWidth + 1) / 2
+	startY := -float64(rows-1) * (alienHeight + 1) / 2
+
+	for row := 0; row < rows && len(positions) < count; row++ {
+		for col := 0; col < cols && len(positions) < count; col++ {
 			positions = append(positions, Vector2D{
 				X: startX + float64(col)*(alienWidth+1),
 				Y: startY + float64(row)*(alienHeight+1),
@@ -283,17 +352,16 @@ func (g *Game) getRectangleFormation(count int, alienWidth, alienHeight float64)
 
 func (g *Game) getTriangleFormation(count int, alienWidth, alienHeight float64) []Vector2D {
 	var positions []Vector2D
-	maxRows := 5
-	maxCols := maxRows
-
-	startX := (float64(g.width) - float64(maxCols)*alienWidth) / 2
-	startY := 2.0
+	maxRows := 3
 
 	for row := 0; row < maxRows && len(positions) < count; row++ {
 		cols := row + 1
+		startX := -float64(cols-1) * (alienWidth + 1) / 2
+		startY := -float64(maxRows-1) * (alienHeight + 1) / 2
+
 		for col := 0; col < cols && len(positions) < count; col++ {
 			positions = append(positions, Vector2D{
-				X: startX + float64(maxCols-cols)/2*alienWidth + float64(col)*(alienWidth+1),
+				X: startX + float64(col)*(alienWidth+1),
 				Y: startY + float64(row)*(alienHeight+1),
 			})
 		}
@@ -304,17 +372,17 @@ func (g *Game) getTriangleFormation(count int, alienWidth, alienHeight float64) 
 
 func (g *Game) getDiamondFormation(count int, alienWidth, alienHeight float64) []Vector2D {
 	var positions []Vector2D
-	maxRows := 7
-	maxCols := 4
-
-	startX := (float64(g.width) - float64(maxCols)*alienWidth) / 2
-	startY := 2.0
+	maxRows := 3
+	maxCols := 2
 
 	for row := 0; row < maxRows && len(positions) < count; row++ {
-		cols := maxCols - abs(row-3)
+		cols := maxCols - abs(row-1)
+		startX := -float64(cols-1) * (alienWidth + 1) / 2
+		startY := -float64(maxRows-1) * (alienHeight + 1) / 2
+
 		for col := 0; col < cols && len(positions) < count; col++ {
 			positions = append(positions, Vector2D{
-				X: startX + float64(maxCols-cols)/2*alienWidth + float64(col)*(alienWidth+1),
+				X: startX + float64(col)*(alienWidth+1),
 				Y: startY + float64(row)*(alienHeight+1),
 			})
 		}
@@ -325,17 +393,17 @@ func (g *Game) getDiamondFormation(count int, alienWidth, alienHeight float64) [
 
 func (g *Game) getVFormation(count int, alienWidth, alienHeight float64) []Vector2D {
 	var positions []Vector2D
-	maxRows := 5
-	maxCols := maxRows*2 - 1
-
-	startX := (float64(g.width) - float64(maxCols)*alienWidth) / 2
-	startY := 2.0
+	maxRows := 2
+	maxCols := 3
 
 	for row := 0; row < maxRows && len(positions) < count; row++ {
 		cols := 2*row + 1
+		startX := -float64(maxCols-1) * (alienWidth + 1) / 2
+		startY := -float64(maxRows-1) * (alienHeight + 1) / 2
+
 		for col := 0; col < cols && len(positions) < count; col++ {
 			positions = append(positions, Vector2D{
-				X: startX + float64(row)*alienWidth + float64(col)*(alienWidth+1),
+				X: startX + float64(row+col)*(alienWidth+1),
 				Y: startY + float64(row)*(alienHeight+1),
 			})
 		}
