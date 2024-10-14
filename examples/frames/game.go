@@ -7,6 +7,7 @@ import (
 
 	"github.com/kuhree/gg/internal/engine/core"
 	"github.com/kuhree/gg/internal/engine/render"
+	"github.com/kuhree/gg/internal/utils"
 )
 
 // Game represents the Frames game state and logic
@@ -18,10 +19,12 @@ type Game struct {
 }
 
 // NewGame creates a new instance of the Frames game
-func NewGame(renderer *render.Renderer, logger *slog.Logger) *Game {
+func NewGame(width, height int) *Game {
+	renderer := render.NewRenderer(width, height) // Create a 80x24 ASCII renderer
+
 	return &Game{
 		renderer: renderer,
-		logger:   logger,
+		logger:   utils.Logger,
 		lastTime: time.Now(),
 	}
 }
@@ -39,13 +42,13 @@ func (g *Game) Update(dt float64) error {
 func (g *Game) Draw() {
 	g.renderer.Clear()
 	fpsText := fmt.Sprintf("FPS: %.2f", g.fps)
-	g.renderer.DrawText(fpsText, 1, 1)
+	_ = g.renderer.DrawText(fpsText, 1, 1, render.ColorBlue)
 	g.renderer.Render()
 }
 
 // HandleInput processes user input
 func (g *Game) HandleInput(input core.InputEvent) error {
-	if  input.Key == core.KeyBackspace || input.Rune == core.KeyQ {
+	if input.Key == core.KeyBackspace || input.Rune == core.KeyQ {
 		return core.ErrQuitGame
 	}
 	return nil

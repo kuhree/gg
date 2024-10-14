@@ -1,33 +1,40 @@
 package space_invaders
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
+	"math"
 
 	"github.com/kuhree/gg/internal/engine/core"
 	"github.com/kuhree/gg/internal/engine/render"
-	"github.com/kuhree/gg/internal/engine/scenes"
 )
 
 // BaseScene provides common functionality for all scenes
 type BaseScene struct {
-	game *Game
-	name string
+	*Game
+	sceneName     string
+	blinkTimer    float64
+	blinkInterval float64
+	showOnBlink   bool
 }
 
 // Enter logs when a scene is entered
 func (s *BaseScene) Enter() {
-	s.game.logger.Info("Entering scene", "scene", s.name)
+	s.Logger.Info("Entering scene", "scene", s.sceneName)
 }
 
 // Exit logs when a scene is exited
 func (s *BaseScene) Exit() {
-	s.game.logger.Info("Exiting scene", "scene", s.name)
+	s.Logger.Info("Exiting scene", "scene", s.sceneName)
 }
 
 // Update is a no-op for scenes that don't need updates
-func (s *BaseScene) Update(dt float64) {}
+func (s *BaseScene) Update(dt float64) {
+	s.blinkTimer += dt
+	if s.blinkTimer >= s.blinkInterval {
+		s.blinkTimer = 0
+		s.showOnBlink = !s.showOnBlink
+	}
+}
 
 // HandleInput is a no-op for scenes that don't handle input
 func (s *BaseScene) HandleInput(input core.InputEvent) error {
@@ -37,18 +44,10 @@ func (s *BaseScene) HandleInput(input core.InputEvent) error {
 // MainMenuScene represents the main menu
 type MainMenuScene struct {
 	BaseScene
-	blinkTimer     float64
-	blinkInterval  float64
-	showPressEnter bool
 }
 
 // PlayingScene represents the main gameplay
 type PlayingScene struct {
-	BaseScene
-}
-
-// GameOverScene represents the game over screen
-type GameOverScene struct {
 	BaseScene
 }
 
@@ -57,15 +56,20 @@ type PauseMenuScene struct {
 	BaseScene
 }
 
+// GameOverScene represents the game over screen
+type GameOverScene struct {
+	BaseScene
+}
+
 // NewMainMenuScene creates a new main menu scene
 func NewMainMenuScene(game *Game) *MainMenuScene {
 	return &MainMenuScene{
 		BaseScene: BaseScene{
-			game: game,
-			name: "Main Menu",
+			Game:          game,
+			sceneName:     "Main Menu",
+			blinkInterval: 0.5,
+			showOnBlink:   true,
 		},
-		blinkInterval:  0.5,
-		showPressEnter: true,
 	}
 }
 
@@ -73,18 +77,10 @@ func NewMainMenuScene(game *Game) *MainMenuScene {
 func NewPlayingScene(game *Game) *PlayingScene {
 	return &PlayingScene{
 		BaseScene: BaseScene{
-			game: game,
-			name: "Playing",
-		},
-	}
-}
-
-// NewGameOverScene creates a new game over scene
-func NewGameOverScene(game *Game) *GameOverScene {
-	return &GameOverScene{
-		BaseScene: BaseScene{
-			game: game,
-			name: "Game Over",
+			Game:          game,
+			sceneName:     "Playing",
+			blinkInterval: 0.5,
+			showOnBlink:   true,
 		},
 	}
 }
@@ -93,242 +89,235 @@ func NewGameOverScene(game *Game) *GameOverScene {
 func NewPauseMenuScene(game *Game) *PauseMenuScene {
 	return &PauseMenuScene{
 		BaseScene: BaseScene{
-			game: game,
-			name: "Pause Menu",
+			Game:          game,
+			sceneName:     "Pause Menu",
+			blinkInterval: 0.5,
+			showOnBlink:   true,
+		},
+	}
+}
+
+// NewGameOverScene creates a new game over scene
+func NewGameOverScene(game *Game) *GameOverScene {
+	return &GameOverScene{
+		BaseScene: BaseScene{
+			Game:          game,
+			sceneName:     "Game Over",
+			blinkInterval: 0.5,
+			showOnBlink:   true,
 		},
 	}
 }
 
 // MainMenuScene methods
 
-func (s *MainMenuScene) Update(dt float64) {
-	s.blinkTimer += dt
-	if s.blinkTimer >= s.blinkInterval {
-		s.blinkTimer = 0
-		s.showPressEnter = !s.showPressEnter
-	}
-}
-
 func (s *MainMenuScene) Draw(renderer *render.Renderer) {
-	centerX := s.game.width / 2
-	renderer.DrawText("SPACE INVADERS", centerX, s.game.height/4)
-	if s.showPressEnter {
-		renderer.DrawText("Press ENTER to start", centerX, s.game.height/2)
+	width, height := s.Renderer.Size()
+	startX := width / 10
+
+	const (
+		titleOffset    = 1.0 / 10
+		startOffset    = 1.0 / 6
+		controlsOffset = 2.0 / 8
+		lineSpacing    = 2
+	)
+
+	_ = renderer.DrawText(fmt.Sprintf("%s - %s", TITLE, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
+
+	if s.showOnBlink {
+		_ = renderer.DrawText("Press ENTER to start", startX, int(float64(height)*startOffset), render.ColorBrightMagenta)
 	}
-	renderer.DrawText("Controls:", centerX, 2*s.game.height/3)
-	renderer.DrawText("Arrow keys / WASD to move", centerX, 2*s.game.height/3+2)
-	renderer.DrawText("SPACE to shoot", centerX, 2*s.game.height/3+4)
+
+	controlsY := int(float64(height) * controlsOffset)
+	_ = renderer.DrawText("Controls:", startX, controlsY, render.ColorBlue)
+	_ = renderer.DrawText("Arrow keys / WASD to move", startX, controlsY+lineSpacing, render.ColorWhite)
+	_ = renderer.DrawText("SPACE to shoot", startX, controlsY+2*lineSpacing, render.ColorWhite)
+	_ = renderer.DrawText("ESC to pause", startX, controlsY+3*lineSpacing, render.ColorWhite)
+	_ = renderer.DrawText("Q to pause/quit", startX, controlsY+4*lineSpacing, render.ColorWhite)
 }
 
 func (s *MainMenuScene) HandleInput(input core.InputEvent) error {
-	if input.Key == core.KeyEnter {
-		s.game.StartNewGame()
-		s.game.sceneManager.ChangeScene(scenes.PlayingSceneID)
+	switch input.Key {
+	case core.KeyEnter:
+		s.Logger.Info("Starting new game")
+		s.CurrentLevel = s.Config.BaseLevel
+		s.Score = s.Config.BaseScore
+		s.Player.Health = s.Config.BasePlayerHealth
+		s.Player.MaxHealth = s.Config.BasePlayerHealth
+		s.Player.Lives = s.Config.BaseLives
+		s.Scenes.ChangeScene(PlayingSceneID)
+		return nil
+	default:
+		switch input.Rune {
+		case 'q', 'Q':
+			s.Scenes.ChangeScene(GameOverSceneID)
+			return core.ErrQuitGame
+		}
 	}
+
 	return nil
 }
 
 // PlayingScene methods
 
+func (s *PlayingScene) Enter() {
+	s.BaseScene.Enter()
+	s.startWave()
+}
+
+func (s *PlayingScene) Exit() {
+	s.BaseScene.Exit()
+}
+
 func (s *PlayingScene) Update(dt float64) {
-	// Game logic updates are handled in the Game struct
-	s.game.logger.Debug("Updating playing state")
-	s.moveAliens(dt)
-	s.moveBullets(dt)
-	s.handleCollisions()
-	s.checkGameOver()
-}
+	s.BaseScene.Update(dt)
+	s.updateAliens(dt)
+	s.updateAlienFiringSquad(dt)
+	s.updateProjectiles(dt)
+	s.updateCollisions()
 
-// moveAliens updates the positions of all aliens
-func (s *PlayingScene) moveAliens(dt float64) {
-	moveDown := false
-	alienWidth := float64(AlienSize)
-
-	// Check if any alien has reached the screen edges
-	for _, alien := range s.game.aliens {
-		if (alien.Speed > 0 && alien.Position.X+alienWidth/2 >= float64(s.game.width)) ||
-			(alien.Speed < 0 && alien.Position.X-alienWidth/2 <= 0) {
-			moveDown = true
-			break
-		}
-	}
-
-	if moveDown {
-		// Reverse direction and move down
-		for _, alien := range s.game.aliens {
-			alien.Speed = -alien.Speed
-			alien.Position.Y += alienWidth / 2 // Move down by half the alien width
-		}
-		s.game.logger.Debug("Aliens moving down and reversing direction")
-	} else {
-		// Move horizontally
-		for _, alien := range s.game.aliens {
-			alien.Position.X += alien.Speed * dt
-		}
-	}
-
-	// Increase speed slightly each time aliens move down
-	if moveDown {
-		for _, alien := range s.game.aliens {
-			if alien.Speed > 0 {
-				alien.Speed += 1
-			} else {
-				alien.Speed -= 1
-			}
-		}
-	}
-}
-
-// moveBullets updates the positions of all bullets
-func (s *PlayingScene) moveBullets(dt float64) {
-	for i := len(s.game.bullets) - 1; i >= 0; i-- {
-		bullet := s.game.bullets[i]
-		bullet.Position.Y -= bullet.Speed * dt // Bullets move upwards
-
-		// Remove bullets that are off-screen
-		if bullet.Position.Y < 0 {
-			s.game.bullets = append(s.game.bullets[:i], s.game.bullets[i+1:]...)
-		}
-	}
-}
-
-// movePlayer updates the player's position based on the given direction
-func (s *PlayingScene) movePlayer(dx, dy int) {
-	newX := s.game.player.Position.X + float64(dx)*s.game.player.Speed
-	newY := s.game.player.Position.Y + float64(dy)*s.game.player.Speed
-
-	// Clamp the player's position to stay within the game boundaries
-	newX = clamp(newX, float64(PlayerSize)/2, float64(s.game.width)-float64(PlayerSize)/2)
-	newY = clamp(newY, float64(PlayerSize)/2, float64(s.game.height)-float64(PlayerSize)/2)
-
-	s.game.player.Position.X = newX
-	s.game.player.Position.Y = newY
-
-	s.game.logger.Debug("Player moved",
-		"newX", newX,
-		"newY", newY,
-		"dx", dx,
-		"dy", dy)
-}
-
-// LoadLevels loads level data from a JSON file
-func (g *Game) LoadLevels(filename string) error {
-	file, err := os.Open(filename)
-	if err != nil {
-		return fmt.Errorf("failed to open levels file: %w", err)
-	}
-	defer file.Close()
-
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&g.levels); err != nil {
-		return fmt.Errorf("failed to decode levels data: %w", err)
-	}
-
-	g.logger.Info("Levels loaded successfully", "count", len(g.levels))
-	return nil
-}
-
-// fireBullet creates a new bullet from the player's position
-func (s *PlayingScene) fireBullet() {
-	bullet := &Bullet{
-		GameObject: GameObject{
-			Position: Vector2D{X: s.game.player.Position.X, Y: s.game.player.Position.Y - float64(PlayerSize)/2},
-			Speed:    s.game.bulletSpeed,
-		},
-		Damage: 1,
-	}
-	s.game.bullets = append(s.game.bullets, bullet)
-	s.game.logger.Info("Player fired a bullet", "bulletSpeed", s.game.bulletSpeed)
-}
-
-// handleCollisions detects and handles collisions between game objects
-func (s *PlayingScene) handleCollisions() {
-	// Check bullet collisions
-	for i := len(s.game.bullets) - 1; i >= 0; i-- {
-		bullet := s.game.bullets[i]
-		for j, alien := range s.game.aliens {
-			if checkCollision(bullet.Position, alien.Position, BulletSize, AlienSize) {
-				s.game.score += alien.Points
-				s.game.logger.Info("Score updated", "score", s.game.score)
-				s.game.aliens = append(s.game.aliens[:j], s.game.aliens[j+1:]...)
-				s.game.bullets = append(s.game.bullets[:i], s.game.bullets[i+1:]...)
-				break
-			}
-		}
-
-		for j, barrier := range s.game.barriers {
-			if checkCollision(bullet.Position, barrier.Position, BulletSize, AlienSize) {
-				s.game.barriers[j].Health -= bullet.Damage
-				s.game.bullets = append(s.game.bullets[:i], s.game.bullets[i+1:]...)
-				if s.game.barriers[j].Health <= 0 {
-					s.game.barriers = append(s.game.barriers[:i], s.game.barriers[i+1:]...)
-				}
-				break
-			}
-		}
-	}
-}
-
-// checkGameOver determines if the game should end
-func (s *PlayingScene) checkGameOver() {
-	if len(s.game.aliens) == 0 {
-		s.game.currentLevel++
-		s.game.logger.Info("Level completed", "newLevel", s.game.currentLevel+1)
-
-		if s.game.currentLevel >= len(s.game.levels) {
-			s.game.logger.Info("All levels completed, game won!")
-			s.game.sceneManager.ChangeScene(scenes.GameOverSceneID)
-			return
-		}
-
-		s.game.initializeLevel()
-		return
-	}
-
-	for _, alien := range s.game.aliens {
-		if alien.Position.Y+float64(AlienSize)/2 >= s.game.player.Position.Y-float64(PlayerSize)/2 {
-			s.game.sceneManager.ChangeScene(scenes.GameOverSceneID)
-			s.game.logger.Info("Game over: Aliens reached the bottom")
-			return
-		}
-	}
-
-	if s.game.player.lives <= 0 {
-		s.game.sceneManager.ChangeScene(scenes.GameOverSceneID)
-		s.game.logger.Info("Game over: Player out of lives")
-	}
+	aliensCountPrev := len(s.Aliens) // must be before removing/killing, ehhh
+	s.killTheDead()
+	s.updateGameState(aliensCountPrev)
 }
 
 func (s *PlayingScene) Draw(renderer *render.Renderer) {
+	width, _ := s.Renderer.Size()
+
 	// Draw player
-	s.game.renderer.DrawRect(int(s.game.player.Position.X-float64(PlayerSize)/2), int(s.game.player.Position.Y-float64(PlayerSize)/2), PlayerSize, PlayerSize, 'P')
+	player := s.Player
+	playerChar, playerColor := s.getHealthInfo(player.Health, s.Player.MaxHealth)
+
+	_ = s.Renderer.DrawRect(
+		int(player.Position.X-player.Width/2),
+		int(player.Position.Y-player.Height/2),
+		int(player.Width),
+		int(player.Height),
+		playerChar,
+		playerColor,
+	)
+
+	s.drawObjOverlay(&player.GameObject, playerColor, OverlayOpts{Health: s.Debug, Attack: s.Debug})
 
 	// Draw aliens
-	for _, alien := range s.game.aliens {
-		s.game.renderer.DrawRect(int(alien.Position.X-float64(AlienSize)/2), int(alien.Position.Y-float64(AlienSize)/2), AlienSize, AlienSize, 'A')
+	for _, alien := range s.Aliens {
+		alienChar, alienColor := s.getAlienInfo(alien)
+
+		if s.Debug {
+			_ = s.Renderer.DrawText(fmt.Sprintf("%d", alien.AlienType),
+				int(alien.Position.X-alien.Width/2),
+				int(alien.Position.Y-alien.Height/2)-1,
+				alienColor,
+			)
+		}
+
+		_ = s.Renderer.DrawRect(
+			int(alien.Position.X-alien.Width/2),
+			int(alien.Position.Y-alien.Height/2),
+			int(alien.Width),
+			int(alien.Height),
+			alienChar,
+			alienColor,
+		)
+
+		s.drawObjOverlay(&alien.GameObject, alienColor, OverlayOpts{Health: true, Attack: s.Debug})
 	}
 
-	// Draw bullets
-	for _, bullet := range s.game.bullets {
-		s.game.renderer.DrawRect(int(bullet.Position.X-float64(BulletSize)/2), int(bullet.Position.Y-float64(BulletSize)/2), BulletSize, BulletSize, '*')
+	// Draw projectiles
+	for _, projectile := range s.Projectiles {
+		projectileChar, projectileColor := s.getProjectileInfo(projectile)
+		_ = s.Renderer.DrawRect(
+			int(projectile.Position.X-projectile.Width/2),
+			int(projectile.Position.Y-projectile.Height/2),
+			int(projectile.Width),
+			int(projectile.Height),
+			projectileChar,
+			projectileColor,
+		)
+
+		s.drawObjOverlay(&projectile.GameObject, render.ColorWhite, OverlayOpts{Health: s.Debug, Attack: true})
 	}
 
 	// Draw barriers
-	for _, barrier := range s.game.barriers {
-		s.game.renderer.DrawRect(int(barrier.Position.X-float64(BarrierSize)/2), int(barrier.Position.Y-float64(BarrierSize)/2), BarrierSize, BarrierSize, '+')
+	for _, barrier := range s.Barriers {
+		barrierChar, barrierColor := s.getBarrierInfo(barrier.Health, barrier.MaxHealth)
+
+		_ = s.Renderer.DrawRect(
+			int(barrier.Position.X-barrier.Width/2),
+			int(barrier.Position.Y-barrier.Height/2),
+			int(barrier.Width),
+			int(barrier.Height),
+			barrierChar,
+			barrierColor,
+		)
+
+		s.drawObjOverlay(&barrier.GameObject, render.ColorWhite, OverlayOpts{Health: true, Attack: s.Debug})
 	}
 
-	// Draw score, level, remaining enemies, and lives
-	s.game.renderer.DrawText(fmt.Sprintf("Score: %d", s.game.score), 1, 1)
-	s.game.renderer.DrawText(fmt.Sprintf("Level: %d", s.game.currentLevel+1), 1, 2)
-	s.game.renderer.DrawText(fmt.Sprintf("Enemies: %d", len(s.game.aliens)), 1, 3)
-	s.game.renderer.DrawText(fmt.Sprintf("Lives: %d", s.game.player.lives), s.game.width-10, 1)
+	// Draw score, level, lives...
+	_ = s.Renderer.DrawText(fmt.Sprintf("Score: %d", s.Score), 1, 1, render.ColorWhite)
+	_ = s.Renderer.DrawText(fmt.Sprintf("Level: %d", s.CurrentLevel), 1, 2, render.ColorWhite)
+	_ = s.Renderer.DrawText(fmt.Sprintf("Enemies: %d", len(s.Aliens)), 1, 3, render.ColorWhite)
+
+	_ = s.Renderer.DrawText(fmt.Sprintf("Health: %.2f", player.Health), width-13, 1, playerColor)
+	_ = s.Renderer.DrawText(fmt.Sprintf("Attack: %.2f", player.Attack), width-12, 2, render.ColorWhite)
+	_ = s.Renderer.DrawText(fmt.Sprintf("Lives: %d", player.Lives), width-8, 3, render.ColorWhite)
+}
+
+type OverlayOpts struct {
+	Health bool
+	Attack bool
+}
+
+func (s *PlayingScene) drawObjOverlay(obj *GameObject, color render.Color, opts OverlayOpts) {
+	_, healthColor := s.getHealthInfo(obj.Health, obj.MaxHealth)
+
+	if opts.Health {
+		_ = s.Renderer.DrawText(
+			fmt.Sprintf("%.f", math.Round(obj.Health)),
+			int(obj.Position.X-obj.Width/2),
+			int(obj.Position.Y+obj.Height/2)-1,
+			healthColor,
+		)
+	}
+
+	if opts.Attack {
+		_ = s.Renderer.DrawText(
+			fmt.Sprintf("%.f", math.Round(obj.Attack)),
+			int(obj.Position.X-obj.Width/2),
+			int(obj.Position.Y-obj.Height/2),
+			render.ColorRed,
+		)
+	}
+
+	if s.Debug {
+		_ = s.Renderer.DrawText(
+			fmt.Sprintf("P:%.fX,%.fY", obj.Position.X, obj.Position.Y),
+			int(obj.Position.X+obj.Width/2)+1,
+			int(obj.Position.Y-obj.Height/2)-1,
+			color,
+		)
+		_ = s.Renderer.DrawText(
+			fmt.Sprintf("A:%.fWx%.fH", obj.Width, obj.Height),
+			int(obj.Position.X+obj.Width/2)+1,
+			int(obj.Position.Y-obj.Height/2),
+			color,
+		)
+		_ = s.Renderer.DrawText(
+			fmt.Sprintf("S:%.fX,%.fY", obj.Speed.X, obj.Speed.Y),
+			int(obj.Position.X+obj.Width/2)+1,
+			int(obj.Position.Y-obj.Height/2)+1,
+			color,
+		)
+	}
 }
 
 func (s *PlayingScene) HandleInput(input core.InputEvent) error {
+	s.Logger.Info("Key pressed", "key", input.Key, "rune", input.Rune)
+
 	switch input.Key {
 	case core.KeySpace:
-		s.fireBullet()
+		s.Shoot(&s.Player.GameObject)
 	case core.KeyLeft:
 		s.movePlayer(-1, 0)
 	case core.KeyRight:
@@ -338,9 +327,11 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 	case core.KeyDown:
 		s.movePlayer(0, 1)
 	case core.KeyEscape:
-		s.game.sceneManager.ChangeScene(scenes.PauseMenuSceneID)
+		s.Scenes.ChangeScene(PauseMenuSceneID)
 	default:
 		switch input.Rune {
+		case 'q', 'Q':
+			s.Scenes.ChangeScene(PauseMenuSceneID)
 		case 'w', 'W':
 			s.movePlayer(0, -1)
 		case 'a', 'A':
@@ -350,33 +341,8 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 		case 'd', 'D':
 			s.movePlayer(1, 0)
 		case ' ':
-		s.fireBullet()
+			s.Shoot(&s.Player.GameObject)
 		}
-	}
-	return nil
-}
-
-// GameOverScene methods
-
-func (s *GameOverScene) Draw(renderer *render.Renderer) {
-	centerX := s.game.width / 2
-	renderer.DrawText("GAME OVER", centerX, s.game.height/4)
-	renderer.DrawText(fmt.Sprintf("Final Score: %d", s.game.score), centerX, s.game.height/3)
-	renderer.DrawText(fmt.Sprintf("Final Level: %d", s.game.currentLevel+1), centerX, s.game.height/2)
-	renderer.DrawText(fmt.Sprintf("Enemies Remaining: %d", len(s.game.aliens)), centerX, s.game.height/2+2)
-	renderer.DrawText("Press ENTER to return to main menu", centerX, 2*s.game.height/3)
-	renderer.DrawText("Press Q to quit the game", centerX, 2*s.game.height/3+2)
-}
-
-func (s *GameOverScene) HandleInput(input core.InputEvent) error {
-	if input.Key == core.KeyEnter {
-		s.game.sceneManager.ChangeScene(scenes.MainMenuSceneID)
-		return nil
-	}
-
-	switch input.Rune {
-	case 'q', 'Q':
-		return core.ErrQuitGame
 	}
 	return nil
 }
@@ -384,24 +350,118 @@ func (s *GameOverScene) HandleInput(input core.InputEvent) error {
 // PauseMenuScene methods
 
 func (s *PauseMenuScene) Draw(renderer *render.Renderer) {
-	centerX := s.game.width / 2
-	renderer.DrawText("PAUSED", centerX, s.game.height/4)
-	renderer.DrawText(fmt.Sprintf("Current Score: %d", s.game.score), centerX, s.game.height/3)
-	renderer.DrawText(fmt.Sprintf("Current Level: %d", s.game.currentLevel+1), centerX, s.game.height/3+2)
-	renderer.DrawText("Press ESC to resume", centerX, s.game.height/2)
-	renderer.DrawText("Press R to restart level", centerX, s.game.height/2+2)
-	renderer.DrawText("Press Q to quit", centerX, 2*s.game.height/3)
+	const (
+		titleOffset    = 1.0 / 10
+		scoreOffset    = 1.0 / 6
+		controlsOffset = 1.0 / 4
+		lineSpacing    = 2
+	)
+
+	width, height := s.Renderer.Size()
+	startX := width / 10
+
+	// Draw title
+	_ = renderer.DrawText(fmt.Sprintf("%s - %s", TITLE, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
+
+	if s.showOnBlink {
+		_ = renderer.DrawText(
+			fmt.Sprintf("Score: %d | Level: %d | Enemies Remaining | %d", s.Score, s.CurrentLevel, len(s.Aliens)),
+			startX,
+			int(float64(height)*scoreOffset),
+			render.ColorMagenta,
+		)
+	}
+
+	// Draw controls
+	controlsY := int(float64(height) * controlsOffset)
+	_ = renderer.DrawText("Controls:", startX, controlsY, render.ColorBlue)
+	_ = renderer.DrawText("Press ESC to resume", startX, controlsY+lineSpacing, render.ColorWhite)
+	_ = renderer.DrawText("Press Q to quit", startX, controlsY+2*lineSpacing, render.ColorWhite)
+	_ = renderer.DrawText("Press R to Restart", startX, controlsY+3*lineSpacing, render.ColorWhite)
 }
 
 func (s *PauseMenuScene) HandleInput(input core.InputEvent) error {
 	switch input.Key {
 	case core.KeyEscape:
-		s.game.sceneManager.ChangeScene(scenes.PlayingSceneID)
+		s.Scenes.ChangeScene(PlayingSceneID)
 	default:
 		switch input.Rune {
-		case core.KeyQ:
+		case 'q', 'Q':
+			s.Scenes.ChangeScene(GameOverSceneID)
 			return core.ErrQuitGame
+		case 'r', 'R':
+			s.Scenes.ChangeScene(PlayingSceneID)
 		}
+	}
+
+	return nil
+}
+
+// GameOverScene methods
+
+func (s *GameOverScene) Enter() {
+	s.BaseScene.Enter()
+
+	if s.Score > 0 {
+		err := s.Leaderboard.Load(s.Config.BoardFile)
+		if err != nil {
+			s.Logger.Error("Failed to load leaderboard", "err", err)
+			return
+		}
+
+		width, height := s.Renderer.Size()
+		s.Logger.Info("Adding leaderboard entry...", "score", s.Score)
+		s.Leaderboard.Add("anon", s.Score, fmt.Sprintf("Level: %d, Health: %.2f, Attack: %.2f | (%dx%d)", s.CurrentLevel, s.Player.Health, s.Player.Attack, width, height))
+	}
+}
+
+func (s *GameOverScene) Draw(renderer *render.Renderer) {
+	const (
+		titleOffset       = 1.0 / 10
+		scoreOffset       = 1.0 / 6
+		leaderboardOffset = 1.0 / 4
+		controlsOffset    = 3.0 / 4
+		lineSpacing       = 2
+	)
+
+	width, height := s.Renderer.Size()
+	startX := width / 10
+
+	// Draw title and game over message
+	_ = renderer.DrawText(fmt.Sprintf("%s - %s", TITLE, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
+	if s.showOnBlink {
+		_ = renderer.DrawText(
+			fmt.Sprintf("Score: %d | Level: %d", s.Score, s.CurrentLevel),
+			startX,
+			int(float64(height)*scoreOffset),
+			render.ColorMagenta,
+		)
+	}
+
+	// Draw leaderboard
+	leaderboardY := int(float64(height) * leaderboardOffset)
+	_ = renderer.DrawText("Top Scores:", startX, leaderboardY, render.ColorBlue)
+	topScores := s.Leaderboard.TopScores(5)
+	for i, entry := range topScores {
+		_ = renderer.DrawText(fmt.Sprintf("%d. %s: %d | %s", i+1, entry.Name, entry.Score, entry.Notes), startX, leaderboardY+(i+1)*lineSpacing, render.ColorWhite)
+	}
+
+	// Draw controls
+	controlsY := int(float64(height) * controlsOffset)
+	_ = renderer.DrawText("Controls:", startX, controlsY, render.ColorBlue)
+	_ = renderer.DrawText("Press Q to quit the game", startX, controlsY+lineSpacing, render.ColorWhite)
+	_ = renderer.DrawText("Press ENTER to return to main menu", startX, controlsY+2*lineSpacing, render.ColorWhite)
+}
+
+func (s *GameOverScene) HandleInput(input core.InputEvent) error {
+	if input.Key == core.KeyEnter {
+		s.Scenes.ChangeScene(MainMenuSceneID)
+		return nil
+	}
+
+	switch input.Rune {
+	case 'q', 'Q':
+		return core.ErrQuitGame
 	}
 	return nil
 }

@@ -5,24 +5,22 @@ import (
 	"time"
 
 	"github.com/eiannone/keyboard"
-	"github.com/kuhree/gg/internal/engine/render"
+	"github.com/kuhree/gg/internal/utils"
 )
 
 // GameLoop manages the main game loop
 type GameLoop struct {
 	game     Game
-	renderer *render.Renderer
 	logger   *slog.Logger
 	running  bool
 	keyEvents chan keyboard.KeyEvent
 }
 
 // NewGameLoop creates a new GameLoop
-func NewGameLoop(game Game, renderer *render.Renderer, logger *slog.Logger) *GameLoop {
+func NewGameLoop(game Game) *GameLoop {
 	return &GameLoop{
 		game:     game,
-		renderer: renderer,
-		logger:   logger,
+		logger:  utils.Logger,
 		keyEvents: make(chan keyboard.KeyEvent, 10), // Buffer for key events
 	}
 }
