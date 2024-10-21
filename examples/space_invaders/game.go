@@ -99,6 +99,7 @@ func NewGame(width, height int, workDir string, debug bool) (*Game, error) {
 		logger.Info("Config loaded!", "path", config.ConfigFile, "config", config)
 	}
 
+	logger.Debug(config.BoardFile)
 	board, err := leaderboard.NewBoard(config.BoardFile)
 	if err != nil {
 		return nil, err
@@ -148,10 +149,13 @@ func (g *Game) Init() error {
 
 // Cleanup performs any necessary cleanup
 func (g *Game) Cleanup() {
-	err := g.Leaderboard.Save(g.Config.BoardFile)
-	if err != nil {
-		g.Logger.Error(fmt.Sprintf("%s - Leaderboard failed to save", g.Config.Title), "err", err)
-		return
+	if g.Score > 0 {
+		err := g.Leaderboard.Save(g.Config.BoardFile)
+		if err != nil {
+			g.Logger.Error(fmt.Sprintf("%s - Leaderboard failed to save", g.Config.Title), "err", err)
+		} else {
+			g.Logger.Info("Leaderboard entry saved!...", "score", g.Score)
+		}
 	}
 
 	g.Logger.Info(fmt.Sprintf("%s - Game cleaned up", g.Config.Title))
