@@ -15,17 +15,25 @@ import (
 var (
 	height   int
 	width    int
-	debug    bool
 	workDir  string
 	gameName string
+
+	debug   bool
+	overlay bool
 )
 
 func init() {
-	flag.BoolVar(&debug, "debug", false, "Enable Debug logging default")
 	flag.StringVar(&gameName, "game", "", "Name of the game to launch")
 	flag.StringVar(&workDir, "workDir", "./tmp", "Working directory for the game state")
 	flag.IntVar(&width, "width", 80, "width of the game")
 	flag.IntVar(&height, "height", 24, "height of the game")
+
+	flag.BoolVar(&debug, "debug", false, "Enable Debug logging. Will enable all othe debug attributes.")
+	flag.BoolVar(&overlay, "overlay", false, "Enable some useful overlays")
+
+	if debug {
+		overlay = true
+	}
 }
 
 func notImplemented() error {
@@ -49,7 +57,7 @@ var games = []struct {
 	}},
 
 	{"Space Invaders", func() error {
-		game, err := space_invaders.NewGame(width, height, workDir, debug)
+		game, err := space_invaders.NewGame(width, height, workDir, debug, overlay)
 		if err != nil {
 			return err
 		}

@@ -75,13 +75,14 @@ func (s *PlayingScene) updateAliens(dt float64) {
 	width, height := s.Renderer.Size()
 
 	for _, alien := range s.Aliens {
-		// Apply movement based on alien type
+		// Apply smoother movement based on alien type
 		switch alien.AlienType {
 		case FastAlien:
 			alien.Position.X += alien.Speed.X * dt
 			alien.Position.Y += math.Sin(alien.Position.X*0.1) * dt * 10
 		case ToughAlien:
 			alien.Position.X += alien.Speed.X * dt * 0.8
+			alien.Position.Y += math.Cos(alien.Position.X*0.05) * dt * 5
 		case ShooterAlien:
 			alien.Position.X += alien.Speed.X * dt
 			alien.Position.Y += math.Sin(alien.Position.X*0.2) * dt * 5
@@ -89,26 +90,26 @@ func (s *PlayingScene) updateAliens(dt float64) {
 			alien.Position.X += alien.Speed.X * dt
 			alien.Position.Y += math.Cos(alien.Position.X*0.05) * dt * 5
 		default:
-			// move horizontally
+			// Add a slight vertical movement to basic aliens
 			alien.Position.X += alien.Speed.X * dt
+			alien.Position.Y += math.Sin(alien.Position.X*0.1) * dt * 2
 		}
 
-		// Boundary checks for all alien types
-		if alien.Position.X-alien.Width/2 <= 0 {
-			alien.Position.X = alien.Width / 2
-			alien.Speed.X = math.Abs(alien.Speed.X)
-		} else if alien.Position.X+alien.Width/2 >= float64(width) {
-			alien.Position.X = float64(width) - alien.Width/2
-			alien.Speed.X = -math.Abs(alien.Speed.X)
+		// Smooth boundary checks
+		if alien.Position.X-alien.Width/2 <= 0 || alien.Position.X+alien.Width/2 >= float64(width) {
+			// Gradually change direction
+			alien.Speed.X = -alien.Speed.X * 0.9
 		}
 
-		if alien.Position.Y-alien.Height/2 <= 0 {
-			alien.Position.Y = alien.Height / 2
-			alien.Speed.Y = math.Abs(alien.Speed.Y)
-		} else if alien.Position.Y+alien.Height/2 >= float64(height) {
-			alien.Position.Y = float64(height) - alien.Height/2
-			alien.Speed.Y = -math.Abs(alien.Speed.Y)
+		if alien.Position.Y-alien.Height/2 <= 0 || alien.Position.Y+alien.Height/2 >= float64(height) {
+			// Gradually change direction
+			alien.Speed.Y = -alien.Speed.Y * 0.9
 		}
+
+		// Ensure alien stays within bounds
+		alien.Position.X = clamp(alien.Position.X, alien.Width/2, float64(width)-alien.Width/2)
+		alien.Position.Y = clamp(alien.Position.Y, alien.Height/2, float64(height)-alien.Height/2)
+
 	}
 }
 
