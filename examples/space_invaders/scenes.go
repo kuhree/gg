@@ -50,6 +50,7 @@ type MainMenuScene struct {
 // PlayingScene represents the main gameplay
 type PlayingScene struct {
 	BaseScene
+	collectableSpawnTimer float64
 }
 
 // PauseMenuScene represents the pause menu
@@ -163,7 +164,7 @@ func (s *MainMenuScene) HandleInput(input core.InputEvent) error {
 
 func (s *PlayingScene) Enter() {
 	s.BaseScene.Enter()
-	s.startWave()
+	// s.startWave()
 }
 
 func (s *PlayingScene) Exit() {
@@ -172,13 +173,12 @@ func (s *PlayingScene) Exit() {
 
 func (s *PlayingScene) Update(dt float64) {
 	s.BaseScene.Update(dt)
-	s.updateCollectibles(dt)
+	s.updateCollectables(dt)
 	s.updateAliens(dt)
-	s.updateAlienFiringSquad(dt)
 	s.updateProjectiles(dt)
 	s.updateCollisions()
 
-	s.killTheDead()
+	s.murder()
 	s.updateGameState()
 }
 
@@ -332,7 +332,7 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 
 	switch input.Key {
 	case core.KeySpace:
-		s.Shoot(&s.Player.GameObject)
+		s.shoot(&s.Player.GameObject)
 	case core.KeyLeft:
 		s.movePlayer(-1, 0)
 	case core.KeyRight:
@@ -356,7 +356,7 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 		case 'd', 'D':
 			s.movePlayer(1, 0)
 		case ' ':
-			s.Shoot(&s.Player.GameObject)
+			s.shoot(&s.Player.GameObject)
 		}
 	}
 	return nil
@@ -405,6 +405,9 @@ func (s *PauseMenuScene) HandleInput(input core.InputEvent) error {
 			s.Scenes.ChangeScene(GameOverSceneID)
 			return core.ErrQuitGame
 		case 'r', 'R':
+			s.Player.Lives++
+			s.Player.Health = 0
+			s.Logger.Info("Restarting level: Player given an extra life and health set to zero")
 			s.Scenes.ChangeScene(PlayingSceneID)
 		}
 	}

@@ -11,12 +11,46 @@ import (
 )
 
 const (
-	PowerUpShield CollectableType = iota
+	PowerUpHealth CollectableType = iota
 	PowerUpRapidFire
 	PowerUpMultiShot
 	PowerUpExtraLife
 	PowerUpBomb
 )
+
+type CollectableAttributes struct {
+	Type        CollectableType
+	SpawnChance float64
+	Duration    float64
+}
+
+var collectableTypes = map[CollectableType]CollectableAttributes{
+	PowerUpHealth: {
+		Type:        PowerUpHealth,
+		SpawnChance: 1,
+		Duration:    0,
+	},
+	PowerUpRapidFire: {
+		Type:        PowerUpRapidFire,
+		SpawnChance: 0.10,
+		Duration:    10.0,
+	},
+	PowerUpMultiShot: {
+		Type:        PowerUpMultiShot,
+		SpawnChance: 0.10,
+		Duration:    10.0,
+	},
+	PowerUpExtraLife: {
+		Type:        PowerUpExtraLife,
+		SpawnChance: 0.25,
+		Duration:    0,
+	},
+	PowerUpBomb: {
+		Type:        PowerUpBomb,
+		SpawnChance: 0.05,
+		Duration:    0,
+	},
+}
 
 const (
 	BasicAlien AlienType = iota
@@ -78,100 +112,10 @@ var alienTypes = map[AlienType]AlienAttributes{
 	},
 }
 
-func (s *PlayingScene) updateCollectibles(dt float64) {
-	// Update active effects durations
-	for effectType := range s.ActiveEffects {
-		s.ActiveEffects[effectType] -= dt
-		if s.ActiveEffects[effectType] <= 0 {
-			delete(s.ActiveEffects, effectType)
-		}
-	}
-
-	if rand.Float64() < s.Config.BaseCollectibleSpawnChance {
-		s.setupCollectibles()
-	}
-
-	for _, collectable := range s.Collectables {
-		collectable.Position.Y += 10 * dt // Move downwards
-	}
-}
-
-// updateAliens updates the positions of all aliens
-func (s *PlayingScene) updateAliens(dt float64) {
-	// Original alien update logic
-	width, height := s.Renderer.Size()
-
-	for _, alien := range s.Aliens {
-		// Apply smoother movement based on alien type
-		switch alien.AlienType {
-		case FastAlien:
-			alien.Position.X += alien.Speed.X * dt
-			alien.Position.Y += math.Sin(alien.Position.X*0.1) * dt * 10
-		case ToughAlien:
-			alien.Position.X += alien.Speed.X * dt * 0.8
-			alien.Position.Y += math.Cos(alien.Position.X*0.05) * dt * 5
-		case ShooterAlien:
-			alien.Position.X += alien.Speed.X * dt
-			alien.Position.Y += math.Sin(alien.Position.X*0.2) * dt * 5
-		case BossAlien:
-			alien.Position.X += alien.Speed.X * dt
-			alien.Position.Y += math.Cos(alien.Position.X*0.05) * dt * 5
-		default:
-			// Add a slight vertical movement to basic aliens
-			alien.Position.X += alien.Speed.X * dt
-			alien.Position.Y += math.Sin(alien.Position.X*0.1) * dt * 2
-		}
-
-		// Smooth boundary checks
-		if alien.Position.X-alien.Width/2 <= 0 || alien.Position.X+alien.Width/2 >= float64(width) {
-			// Gradually change direction
-			alien.Speed.X = -alien.Speed.X * 0.9
-		}
-
-		if alien.Position.Y-alien.Height/2 <= 0 || alien.Position.Y+alien.Height/2 >= float64(height) {
-			// Gradually change direction
-			alien.Speed.Y = -alien.Speed.Y * 0.9
-		}
-
-		// Ensure alien stays within bounds
-		alien.Position.X = clamp(alien.Position.X, alien.Width/2, float64(width)-alien.Width/2)
-		alien.Position.Y = clamp(alien.Position.Y, alien.Height/2, float64(height)-alien.Height/2)
-
-	}
-}
-
-// updateAlienFiringSquad handles aliens "shooting"
-func (s *PlayingScene) updateAlienFiringSquad(dt float64) {
-	for _, alien := range s.Aliens {
-		alien.shootCooldown -= dt
-		if alien.shootCooldown <= 0 {
-			if rand.Float64() < alien.shootChance {
-				cooldownRandomFactor := rand.Float64() * s.Config.IntervalRandomFactor
-				alien.shootCooldown = alien.shootInterval * (1 + cooldownRandomFactor)
-				s.Shoot(&alien.GameObject)
-			}
-			alien.shootCooldown = alien.shootInterval
-		}
-	}
-}
-
-// updateProjectiles updates the positions of all projectiles
-func (s *PlayingScene) updateProjectiles(dt float64) {
-	for i := len(s.Projectiles) - 1; i >= 0; i-- {
-		projectile := s.Projectiles[i]
-		projectile.Position.X += projectile.Speed.X * dt
-		projectile.Position.Y += projectile.Speed.Y * dt
-
-		// Remove projectiles that are off-screen
-		if projectile.Position.Y < 0 {
-			s.Projectiles[i].Health = 0
-			s.Projectiles = append(s.Projectiles[:i], s.Projectiles[i+1:]...)
-		}
-	}
-}
-
 // movePlayer updates the player's position based on the given direction
 func (s *PlayingScene) movePlayer(dx, dy int) {
+	s.Logger.Debug("movePlayer called", "dx", dx, "dy", dy, "currentPos", s.Player.Position, "speed", s.Player.Speed)
+
 	newX := s.Player.Position.X + float64(dx)*s.Player.Speed.X
 	newY := s.Player.Position.Y + float64(dy)*s.Player.Speed.Y
 
@@ -183,12 +127,12 @@ func (s *PlayingScene) movePlayer(dx, dy int) {
 	s.Player.Position.X = newX
 	s.Player.Position.Y = newY
 
-	s.Logger.Debug("Player moved", "newX", newX, "newY", newY, "dx", dx, "dy", dy)
+	s.Logger.Debug("Player moved", "newX", newX, "newY", newY, "dx", dx, "dy", dy, "pos", s.Player.Position)
 }
 
-// Shoot creates a new projectile from the given position
+// shoot creates a new projectile from the given position
 // / recoil ??
-func (s *PlayingScene) Shoot(source *GameObject) {
+func (s *PlayingScene) shoot(source *GameObject) {
 	isFromPlayer := source == &s.Player.GameObject
 	position := source.Position
 	attack := source.Attack
@@ -235,18 +179,115 @@ func (s *PlayingScene) Shoot(source *GameObject) {
 	s.Logger.Info(fmt.Sprintf("%s shot a projectile", from), "speed", projectile.Speed)
 }
 
+func (s *PlayingScene) updateCollectables(dt float64) {
+	for effectType := range s.ActiveEffects {
+		s.ActiveEffects[effectType] -= dt
+		if s.ActiveEffects[effectType] <= 0 {
+			delete(s.ActiveEffects, effectType)
+		}
+	}
+
+	for _, collectable := range s.Collectables {
+		collectable.Position.Y += s.Config.BaseCollectableSpeed * dt
+	}
+
+	s.collectableSpawnTimer += dt
+	if s.collectableSpawnTimer >= s.Config.BaseCollectableSpawnInterval {
+		s.collectableSpawnTimer = 0
+		if len(s.Collectables) < s.Config.BaseMaxCollectables {
+			s.spawnCollectables()
+		}
+	}
+}
+
+// updateAliens updates the positions of all aliens
+func (s *PlayingScene) updateAliens(dt float64) {
+	width, height := s.Renderer.Size()
+
+	for i, alien := range s.Aliens {
+		if alien.AlienType == BasicAlien && alien.Health > 0 && alien.Position.Y+float64(alien.Height)/2 >= float64(height) {
+			s.Logger.Warn("BasicAlien reached the bottom")
+			s.Aliens[i].Health = 0
+			s.Player.Health = 0
+		}
+
+		// Apply smoother movement based on alien type
+		switch alien.AlienType {
+		case FastAlien:
+			alien.Position.X += alien.Speed.X * dt
+			alien.Position.Y += math.Sin(alien.Position.X*0.1) * dt * 10
+		case ToughAlien:
+			alien.Position.X += alien.Speed.X * dt * 0.8
+			alien.Position.Y += math.Cos(alien.Position.X*0.05) * dt * 5
+		case ShooterAlien:
+			alien.Position.X += alien.Speed.X * dt
+			alien.Position.Y += math.Sin(alien.Position.X*0.2) * dt * 5
+		case BossAlien:
+			alien.Position.X += alien.Speed.X * dt
+			alien.Position.Y += math.Cos(alien.Position.X*0.05) * dt * 5
+		default:
+			// Add a slight vertical movement to basic aliens
+			alien.Position.X += alien.Speed.X * dt
+			alien.Position.Y += math.Sin(alien.Position.X*0.1) * dt * 2
+		}
+
+		// Smooth boundary checks
+		if alien.Position.X-alien.Width/2 <= 0 || alien.Position.X+alien.Width/2 >= float64(width) {
+			// Gradually change direction
+			alien.Speed.X = -alien.Speed.X * 0.9
+		}
+
+		if alien.Position.Y-alien.Height/2 <= 0 || alien.Position.Y+alien.Height/2 >= float64(height) {
+			// Gradually change direction
+			alien.Speed.Y = -alien.Speed.Y * 0.9
+		}
+
+		// Ensure alien stays within bounds
+		alien.Position.X = clamp(alien.Position.X, alien.Width/2, float64(width)-alien.Width/2)
+		alien.Position.Y = clamp(alien.Position.Y, alien.Height/2, float64(height)-alien.Height/2)
+	}
+
+	// Shoott!
+	for _, alien := range s.Aliens {
+		alien.shootCooldown -= dt
+		if alien.shootCooldown <= 0 {
+			if rand.Float64() < alien.shootChance {
+				cooldownRandomFactor := rand.Float64() * s.Config.IntervalRandomFactor
+				alien.shootCooldown = alien.shootInterval * (1 + cooldownRandomFactor)
+				s.shoot(&alien.GameObject)
+			}
+			alien.shootCooldown = alien.shootInterval
+		}
+	}
+}
+
+// updateProjectiles updates the positions of all projectiles
+func (s *PlayingScene) updateProjectiles(dt float64) {
+	for i := len(s.Projectiles) - 1; i >= 0; i-- {
+		projectile := s.Projectiles[i]
+		projectile.Position.X += projectile.Speed.X * dt
+		projectile.Position.Y += projectile.Speed.Y * dt
+
+		// Remove projectiles that are off-screen
+		if projectile.Position.Y < 0 {
+			s.Projectiles[i].Health = 0
+			s.Projectiles = append(s.Projectiles[:i], s.Projectiles[i+1:]...)
+		}
+	}
+}
+
 // updateCollisions detects and handles collisions between game objects
 // collisions are something else
 func (s *PlayingScene) updateCollisions() {
 
 	player := s.Player
 
-	// Check for collisions between player and collectables
+	// player/collectable
 	for i := len(s.Collectables) - 1; i >= 0; i-- {
 		collectable := s.Collectables[i]
-		if s.Collides(&player.GameObject, &collectable.GameObject) {
+		if s.collides(&player.GameObject, &collectable.GameObject) {
 			s.activateCollectable(collectable)
-			s.Collectables = append(s.Collectables[:i], s.Collectables[i+1:]...)
+			s.Collectables[i].Health = 0
 		}
 	}
 
@@ -254,7 +295,7 @@ func (s *PlayingScene) updateCollisions() {
 		alien := s.Aliens[i]
 
 		// check alien/player collisions
-		if alien.Health >= 0 && s.Collides(&player.GameObject, &alien.GameObject) {
+		if alien.Health >= 0 && s.collides(&player.GameObject, &alien.GameObject) {
 			if alien.Health >= 0 {
 				s.Player.Health -= alien.Health
 			}
@@ -264,7 +305,7 @@ func (s *PlayingScene) updateCollisions() {
 
 		// check alien/barrier collisions
 		for j, barrier := range s.Barriers {
-			if barrier.Health > 0 && s.Collides(&alien.GameObject, &barrier.GameObject) {
+			if barrier.Health > 0 && s.collides(&alien.GameObject, &barrier.GameObject) {
 				s.Barriers[j].Health -= alien.Attack
 				s.Aliens[i].Health = 0
 			}
@@ -277,7 +318,7 @@ func (s *PlayingScene) updateCollisions() {
 		isFromPlayer := projectile.Source == &player.GameObject
 
 		// projectile/player
-		if !isFromPlayer && projectile.Health >= 0 && s.Collides(&projectile.GameObject, &player.GameObject) {
+		if !isFromPlayer && projectile.Health >= 0 && s.collides(&projectile.GameObject, &player.GameObject) {
 			s.Player.Health -= projectile.Attack
 			s.Projectiles[i].Health = 0 // kill it w fire NOW
 		}
@@ -285,7 +326,7 @@ func (s *PlayingScene) updateCollisions() {
 		// projectile/alien
 		for j := len(s.Aliens) - 1; j >= 0; j-- {
 			alien := s.Aliens[j]
-			if isFromPlayer && alien.Health >= 0 && s.Collides(&projectile.GameObject, &alien.GameObject) {
+			if isFromPlayer && alien.Health >= 0 && s.collides(&projectile.GameObject, &alien.GameObject) {
 				if alien.Health >= 0 {
 					s.Projectiles[i].Health -= alien.Health
 				}
@@ -301,9 +342,18 @@ func (s *PlayingScene) updateCollisions() {
 		// projectile/barrier
 		for j := len(s.Barriers) - 1; j >= 0; j-- {
 			barrier := s.Barriers[j]
-			if !isFromPlayer && barrier.Health >= 0 && s.Collides(&projectile.GameObject, &barrier.GameObject) {
+			if !isFromPlayer && barrier.Health >= 0 && s.collides(&projectile.GameObject, &barrier.GameObject) {
 				s.Barriers[j].Health -= projectile.Attack
 				s.Projectiles[i].Health = 0 // kill it, issa barrier
+			}
+		}
+
+		// projectile/collectable
+		for j := len(s.Collectables) - 1; j >= 0; j-- {
+			collectable := s.Collectables[j]
+			if isFromPlayer && s.collides(&projectile.GameObject, &collectable.GameObject) {
+				s.activateCollectable(collectable)
+				s.Collectables[j].Health = 0
 			}
 		}
 
@@ -312,7 +362,7 @@ func (s *PlayingScene) updateCollisions() {
 			proj := s.Projectiles[j]
 			isFromPlayerInner := &player.GameObject == proj.Source
 
-			if isFromPlayer && !isFromPlayerInner && proj.Health >= 0 && s.Collides(&projectile.GameObject, &proj.GameObject) {
+			if isFromPlayer && !isFromPlayerInner && proj.Health >= 0 && s.collides(&projectile.GameObject, &proj.GameObject) {
 				s.Projectiles[j].Health -= projectile.Attack
 				s.Projectiles[i].Health = proj.Attack
 			}
@@ -320,8 +370,8 @@ func (s *PlayingScene) updateCollisions() {
 	}
 }
 
-// Collides checks if two GameObjects are colliding
-func (s *PlayingScene) Collides(obj1, obj2 *GameObject) bool {
+// collides checks if two GameObjects are colliding
+func (s *PlayingScene) collides(obj1, obj2 *GameObject) bool {
 	// Calculate the edges of each object
 	left1 := obj1.Position.X - obj1.Width/2
 	right1 := obj1.Position.X + obj1.Width/2
@@ -343,8 +393,8 @@ func (s *PlayingScene) Collides(obj1, obj2 *GameObject) bool {
 
 func (s *PlayingScene) activateCollectable(c *Collectable) {
 	switch c.CollectableType {
-	case PowerUpShield:
-		s.Player.Health += 50 // Temporary shield
+	case PowerUpHealth:
+		s.Player.Health += s.Config.BasePlayerHealth
 	case PowerUpRapidFire:
 		s.ActiveEffects[PowerUpRapidFire] = c.Duration
 	case PowerUpMultiShot:
@@ -362,16 +412,11 @@ func (s *PlayingScene) destroyAllVisibleAliens() {
 	}
 }
 
-func (s *PlayingScene) killTheDead() {
-	_, height := s.Renderer.Size()
+func (s *PlayingScene) murder() {
 	for i := len(s.Aliens) - 1; i >= 0; i-- {
 		alien := s.Aliens[i]
 		if alien.Health <= 0 {
 			s.Aliens = append(s.Aliens[:i], s.Aliens[i+1:]...)
-		} else if alien.AlienType == BasicAlien && alien.Health > 0 && alien.Position.Y+float64(alien.Height)/2 >= float64(height) {
-			s.Logger.Warn("Alien reached the bottom")
-			s.Aliens = append(s.Aliens[:i], s.Aliens[i+1:]...)
-			s.Player.Health = 0
 		}
 	}
 
@@ -388,32 +433,37 @@ func (s *PlayingScene) killTheDead() {
 			s.Projectiles = append(s.Projectiles[:i], s.Projectiles[i+1:]...)
 		}
 	}
+
+	for i := len(s.Collectables) - 1; i >= 0; i-- {
+		collectable := s.Collectables[i]
+		if collectable.Health <= 0 {
+			s.Collectables = append(s.Collectables[:i], s.Collectables[i+1:]...)
+		}
+	}
 }
 
 // updateGameState determines if the game should end
 func (s *PlayingScene) updateGameState() {
-	width, height := s.Renderer.Size()
+	if s.Player.Health <= 0 {
+		s.Logger.Info("Player is out of health. Losing life...")
+		s.Player.Health = 0
+		s.Player.Lives--
 
-	if len(s.Aliens) == 0 {
-		s.increaseLevel()
+		if s.Player.Lives <= 0 {
+			s.Logger.Info("Player out of lives. Game over...")
+			s.Scenes.ChangeScene(GameOverSceneID)
+			return
+		}
+
+		s.setupLevelPlayer(s.difficulty())
 		return
 	}
 
-	if s.Player.Health <= 0 {
-		s.Logger.Info("Player is out of health. Losing life...")
-		s.Player.Lives--
+	if len(s.Aliens) <= 0 {
+		s.Logger.Info("Level cleared! Advancing...", "newLevel", s.CurrentLevel+s.Config.BaseLevelStep)
+		s.CurrentLevel += s.Config.BaseLevelStep
 
-		if s.Player.Lives > 0 {
-			s.Player.Health = s.Config.BasePlayerHealth
-			s.Player.MaxHealth = s.Config.BasePlayerHealth
-			s.Player.Position = Vector2D{X: float64(width) / 2, Y: float64(height - s.Config.PlayerYOffset)}
-			return
-		}
-	}
-
-	if s.Player.Lives <= 0 {
-		s.Logger.Info("Player out of lives. Game over...")
-		s.Scenes.ChangeScene(GameOverSceneID)
+		s.startWave()
 		return
 	}
 }
@@ -442,13 +492,6 @@ func (s *PlayingScene) increaseScore(delta int) int {
 	return s.Score
 }
 
-func (s *PlayingScene) increaseLevel() {
-	s.Logger.Info("Level cleared! Advancing...", "newLevel", s.CurrentLevel+s.Config.BaseLevelStep)
-	s.CurrentLevel += s.Config.BaseLevelStep
-
-	s.startWave()
-}
-
 func (s *PlayingScene) difficulty() float64 {
 	return s.Config.BaseDifficulty + float64(s.CurrentLevel)*s.Config.BaseDifficultyMultiplier
 }
@@ -457,7 +500,7 @@ func (s *PlayingScene) setupLevelPlayer(difficultyMultiplier float64) {
 	width, height := s.Renderer.Size()
 
 	s.Player.Position = Vector2D{X: float64(width) / 2, Y: float64(height - s.Config.PlayerYOffset)}
-	s.Player.Attack = s.Config.BasePlayerAttack * max(1.1, difficultyMultiplier*0.66)
+	s.Player.Attack = s.Config.BasePlayerAttack * max(1.1, difficultyMultiplier*0.80)
 }
 
 func (s *PlayingScene) setupLevelAliens(difficultyMultiplier float64) {
@@ -576,21 +619,50 @@ func (s *PlayingScene) generateAlienPositions(aliens []*Alien, width, height int
 	return positions
 }
 
-func (s *PlayingScene) setupCollectibles() {
-	width, height := s.Renderer.Size()
+func (s *PlayingScene) spawnCollectables() {
+	if rand.Float64() < s.Config.BaseCollectibleSpawnChance {
+		return // Don't spawn anything this time
+	}
+
+	width, _ := s.Renderer.Size()
+	collectableType := s.chooseCollectableType()
+	c := collectableTypes[collectableType]
+
 	collectable := &Collectable{
 		GameObject: GameObject{
 			Position: Vector2D{
 				X: rand.Float64() * float64(width),
-				Y: rand.Float64() * float64(height/2),
+				Y: 0,
 			},
 			Width:  s.Config.BaseProjectileSize,
 			Height: s.Config.BaseProjectileSize,
+			Health: 1, // so it doesn't get cleaned up
 		},
-		CollectableType: CollectableType(rand.IntN(5)),
-		Duration:        10.0,
+		CollectableType: c.Type,
+		Duration:        c.Duration,
 	}
+
 	s.Collectables = append(s.Collectables, collectable)
+}
+
+func (s *PlayingScene) chooseCollectableType() CollectableType {
+	totalChance := 0.0
+	for _, c := range collectableTypes {
+		totalChance += c.SpawnChance
+	}
+
+	r := rand.Float64() * totalChance
+	cumulativeChance := 0.0
+
+	for collectableType, attributes := range collectableTypes {
+		cumulativeChance += attributes.SpawnChance
+		if r <= cumulativeChance {
+			return collectableType
+		}
+	}
+
+	// Fallback to a default type (should not happen if probabilities sum to 1)
+	return PowerUpHealth
 }
 
 func (s *PlayingScene) setupLevelBarriers(difficultyMultiplier float64) {
@@ -625,7 +697,7 @@ func (s *PlayingScene) getCollectableInfo(col *Collectable) (rune, render.Color)
 	char := 'C'                 // Default character
 	color := render.ColorYellow // Default color
 	switch col.CollectableType {
-	case PowerUpShield:
+	case PowerUpHealth:
 		char = 'S'
 		color = render.ColorBlue
 	case PowerUpRapidFire:
