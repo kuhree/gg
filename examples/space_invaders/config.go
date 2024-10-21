@@ -26,6 +26,9 @@ type Config struct {
 	BaseDifficulty           float64
 	BaseDifficultyMultiplier float64
 
+	BaseCollectibleSpawnChance float64
+	BaseCollectibleDuration    float64
+
 	BasePlayerSize   float64
 	BasePlayerSpeed  float64
 	BasePlayerHealth float64

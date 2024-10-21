@@ -28,12 +28,14 @@ var BaseConfig = Config{
 	BarrierYOffset: 7,
 	AlienYOffset:   3,
 
-	BaseScore:                0,
-	BaseLives:                3,
-	BaseLevel:                1,
-	BaseLevelStep:            1,
-	BaseDifficulty:           1.0,
-	BaseDifficultyMultiplier: 0.1,
+	BaseScore:                  0,
+	BaseLives:                  3,
+	BaseLevel:                  1,
+	BaseLevelStep:              1,
+	BaseDifficulty:             1.0,
+	BaseDifficultyMultiplier:   0.1,
+	BaseCollectibleSpawnChance: 0.01,
+	BaseCollectibleDuration:    10.0,
 
 	BasePlayerSize:   2.0,
 	BasePlayerSpeed:  1.0,
@@ -63,6 +65,7 @@ var BaseConfig = Config{
 }
 
 // Game represents the Space Invaders game state and logic
+
 type Game struct {
 	// Internal engine stuff
 	Renderer    *render.Renderer
@@ -85,6 +88,8 @@ type Game struct {
 	Projectiles       []*Projectile
 	Barriers          []*Barrier
 	BarriersCountLast int
+	Collectables      []*Collectable
+	ActiveEffects     map[CollectableType]float64
 }
 
 // NewGame creates a new instance of the Space Invaders game
@@ -109,13 +114,15 @@ func NewGame(width, height int, workDir string, debug bool, overlay bool) (*Game
 	}
 
 	game := &Game{
-		Renderer:    renderer,
-		Logger:      logger,
-		Config:      config,
-		Leaderboard: board,
-		Debug:       debug,
-		Overlay:     overlay,
-		Scenes:      scenes,
+		Renderer:      renderer,
+		Logger:        logger,
+		Config:        config,
+		Leaderboard:   board,
+		Debug:         debug,
+		Collectables:  make([]*Collectable, 0),
+		ActiveEffects: make(map[CollectableType]float64),
+		Overlay:       overlay,
+		Scenes:        scenes,
 		Player: &Player{
 			GameObject: GameObject{
 				Position: Vector2D{X: float64(width) / 2, Y: float64(height) - float64(config.PlayerYOffset)},

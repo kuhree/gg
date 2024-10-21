@@ -11,6 +11,14 @@ import (
 )
 
 const (
+	PowerUpShield CollectableType = iota
+	PowerUpRapidFire
+	PowerUpMultiShot
+	PowerUpExtraLife
+	PowerUpBomb
+)
+
+const (
 	BasicAlien AlienType = iota
 	FastAlien
 	ToughAlien
@@ -70,8 +78,27 @@ var alienTypes = map[AlienType]AlienAttributes{
 	},
 }
 
+func (s *PlayingScene) updateCollectibles(dt float64) {
+	// Update active effects durations
+	for effectType := range s.ActiveEffects {
+		s.ActiveEffects[effectType] -= dt
+		if s.ActiveEffects[effectType] <= 0 {
+			delete(s.ActiveEffects, effectType)
+		}
+	}
+
+	if rand.Float64() < s.Config.BaseCollectibleSpawnChance {
+		s.setupCollectibles()
+	}
+
+	for _, collectable := range s.Collectables {
+		collectable.Position.Y += 10 * dt // Move downwards
+	}
+}
+
 // updateAliens updates the positions of all aliens
 func (s *PlayingScene) updateAliens(dt float64) {
+	// Original alien update logic
 	width, height := s.Renderer.Size()
 
 	for _, alien := range s.Aliens {
@@ -173,6 +200,11 @@ func (s *PlayingScene) Shoot(source *GameObject) {
 		from = "Player"
 		speed = Vector2D{X: 0, Y: -s.Config.BaseProjectileSpeed}
 		newY = (position.Y - float64(source.Width)/2) - 0.5
+
+		// Handle power-ups for player shooting
+		if s.ActiveEffects[PowerUpRapidFire] > 0 {
+			speed.Y *= 2 // Double projectile speed for rapid fire
+		}
 	}
 
 	projectile := &Projectile{
@@ -185,18 +217,38 @@ func (s *PlayingScene) Shoot(source *GameObject) {
 			Width:     s.Config.BaseProjectileSize,
 			Height:    s.Config.BaseProjectileSize,
 		},
-
 		Source: source,
 	}
 
 	s.Projectiles = append(s.Projectiles, projectile)
+
+	// Handle multi-shot power-up for player
+	if isFromPlayer && s.ActiveEffects[PowerUpMultiShot] > 0 {
+		// Create two additional projectiles
+		leftProjectile := *projectile
+		rightProjectile := *projectile
+		leftProjectile.Position.X -= 5
+		rightProjectile.Position.X += 5
+		s.Projectiles = append(s.Projectiles, &leftProjectile, &rightProjectile)
+	}
+
 	s.Logger.Info(fmt.Sprintf("%s shot a projectile", from), "speed", projectile.Speed)
 }
 
 // updateCollisions detects and handles collisions between game objects
 // collisions are something else
 func (s *PlayingScene) updateCollisions() {
+
 	player := s.Player
+
+	// Check for collisions between player and collectables
+	for i := len(s.Collectables) - 1; i >= 0; i-- {
+		collectable := s.Collectables[i]
+		if s.Collides(&player.GameObject, &collectable.GameObject) {
+			s.activateCollectable(collectable)
+			s.Collectables = append(s.Collectables[:i], s.Collectables[i+1:]...)
+		}
+	}
 
 	for i := len(s.Aliens) - 1; i >= 0; i-- {
 		alien := s.Aliens[i]
@@ -287,6 +339,27 @@ func (s *PlayingScene) Collides(obj1, obj2 *GameObject) bool {
 	}
 
 	return false
+}
+
+func (s *PlayingScene) activateCollectable(c *Collectable) {
+	switch c.CollectableType {
+	case PowerUpShield:
+		s.Player.Health += 50 // Temporary shield
+	case PowerUpRapidFire:
+		s.ActiveEffects[PowerUpRapidFire] = c.Duration
+	case PowerUpMultiShot:
+		s.ActiveEffects[PowerUpMultiShot] = c.Duration
+	case PowerUpExtraLife:
+		s.Player.Lives++
+	case PowerUpBomb:
+		s.destroyAllVisibleAliens()
+	}
+}
+
+func (s *PlayingScene) destroyAllVisibleAliens() {
+	for i := range s.Aliens {
+		s.Aliens[i].Health = 0
+	}
 }
 
 func (s *PlayingScene) killTheDead() {
@@ -503,7 +576,25 @@ func (s *PlayingScene) generateAlienPositions(aliens []*Alien, width, height int
 	return positions
 }
 
+func (s *PlayingScene) setupCollectibles() {
+	width, height := s.Renderer.Size()
+	collectable := &Collectable{
+		GameObject: GameObject{
+			Position: Vector2D{
+				X: rand.Float64() * float64(width),
+				Y: rand.Float64() * float64(height/2),
+			},
+			Width:  s.Config.BaseProjectileSize,
+			Height: s.Config.BaseProjectileSize,
+		},
+		CollectableType: CollectableType(rand.IntN(5)),
+		Duration:        10.0,
+	}
+	s.Collectables = append(s.Collectables, collectable)
+}
+
 func (s *PlayingScene) setupLevelBarriers(difficultyMultiplier float64) {
+
 	if len(s.Barriers) <= 0 {
 		width, height := s.Renderer.Size()
 		s.BarriersCountLast += 1
@@ -529,6 +620,29 @@ func (s *PlayingScene) setupLevelBarriers(difficultyMultiplier float64) {
 			s.Barriers = append(s.Barriers, barrier)
 		}
 	}
+}
+func (s *PlayingScene) getCollectableInfo(col *Collectable) (rune, render.Color) {
+	char := 'C'                 // Default character
+	color := render.ColorYellow // Default color
+	switch col.CollectableType {
+	case PowerUpShield:
+		char = 'S'
+		color = render.ColorBlue
+	case PowerUpRapidFire:
+		char = 'R'
+		color = render.ColorGreen
+	case PowerUpMultiShot:
+		char = 'M'
+		color = render.ColorMagenta
+	case PowerUpExtraLife:
+		char = 'L'
+		color = render.ColorCyan
+	case PowerUpBomb:
+		char = 'B'
+		color = render.ColorRed
+	}
+
+	return char, color
 }
 
 func (s *PlayingScene) getAlienInfo(alien *Alien) (rune, render.Color) {
