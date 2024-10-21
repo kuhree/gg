@@ -8,9 +8,9 @@ import (
 )
 
 type Record struct {
-	Name  string
-	Score int
-	Notes string
+	Name    string
+	Score   int
+	Details string
 }
 
 type Board struct {
@@ -23,18 +23,21 @@ func NewBoard(filename string) (*Board, error) {
 	err := board.Load(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
-			board = &Board{
-				Records: make([]Record, 0),
-			}
+			board = &Board{}
 		}
-		return nil, err
+
+		return board, nil
 	}
 
 	return board, nil
 }
 
 func (b *Board) Add(name string, score int, notes string) {
-	b.Records = append(b.Records, Record{Name: name, Score: score, Notes: notes})
+	if b.Records == nil {
+		b.Records = make([]Record, 0)
+	}
+
+	b.Records = append(b.Records, Record{Name: name, Score: score, Details: notes})
 	sort.Slice(b.Records, func(i, j int) bool {
 		return b.Records[i].Score > b.Records[j].Score
 	})

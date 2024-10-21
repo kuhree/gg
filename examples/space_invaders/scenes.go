@@ -122,7 +122,7 @@ func (s *MainMenuScene) Draw(renderer *render.Renderer) {
 		lineSpacing    = 2
 	)
 
-	_ = renderer.DrawText(fmt.Sprintf("%s - %s", TITLE, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
+	_ = renderer.DrawText(fmt.Sprintf("%s - %s", s.Config.Title, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
 
 	if s.showOnBlink {
 		_ = renderer.DrawText("Press ENTER to start", startX, int(float64(height)*startOffset), render.ColorBrightMagenta)
@@ -176,9 +176,8 @@ func (s *PlayingScene) Update(dt float64) {
 	s.updateProjectiles(dt)
 	s.updateCollisions()
 
-	aliensCountPrev := len(s.Aliens) // must be before removing/killing, ehhh
 	s.killTheDead()
-	s.updateGameState(aliensCountPrev)
+	s.updateGameState()
 }
 
 func (s *PlayingScene) Draw(renderer *render.Renderer) {
@@ -361,7 +360,7 @@ func (s *PauseMenuScene) Draw(renderer *render.Renderer) {
 	startX := width / 10
 
 	// Draw title
-	_ = renderer.DrawText(fmt.Sprintf("%s - %s", TITLE, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
+	_ = renderer.DrawText(fmt.Sprintf("%s - %s", s.Config.Title, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
 
 	if s.showOnBlink {
 		_ = renderer.DrawText(
@@ -428,7 +427,7 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 	startX := width / 10
 
 	// Draw title and game over message
-	_ = renderer.DrawText(fmt.Sprintf("%s - %s", TITLE, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
+	_ = renderer.DrawText(fmt.Sprintf("%s - %s", s.Config.Title, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
 	if s.showOnBlink {
 		_ = renderer.DrawText(
 			fmt.Sprintf("Score: %d | Level: %d", s.Score, s.CurrentLevel),
@@ -443,7 +442,7 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 	_ = renderer.DrawText("Top Scores:", startX, leaderboardY, render.ColorBlue)
 	topScores := s.Leaderboard.TopScores(5)
 	for i, entry := range topScores {
-		_ = renderer.DrawText(fmt.Sprintf("%d. %s: %d | %s", i+1, entry.Name, entry.Score, entry.Notes), startX, leaderboardY+(i+1)*lineSpacing, render.ColorWhite)
+		_ = renderer.DrawText(fmt.Sprintf("%d. %s: %d | %s", i+1, entry.Name, entry.Score, entry.Details), startX, leaderboardY+(i+1)*lineSpacing, render.ColorWhite)
 	}
 
 	// Draw controls
