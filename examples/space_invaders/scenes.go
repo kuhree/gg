@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/kuhree/gg/internal/engine/core"
+	"github.com/kuhree/gg/internal/engine/leaderboard"
 	"github.com/kuhree/gg/internal/engine/render"
 )
 
@@ -400,18 +401,29 @@ func (s *PauseMenuScene) HandleInput(input core.InputEvent) error {
 
 func (s *GameOverScene) Enter() {
 	s.BaseScene.Enter()
-
-	if s.Score > 0 {
-		err := s.Leaderboard.Load(s.Config.BoardFile)
-		if err != nil {
-			s.Logger.Error("Failed to load leaderboard", "err", err)
-			return
-		}
-
-		width, height := s.Renderer.Size()
-		s.Logger.Info("Adding leaderboard entry...", "score", s.Score)
-		s.Leaderboard.Add("anon", s.Score, fmt.Sprintf("Level: %d, Health: %.2f, Attack: %.2f | (%dx%d)", s.CurrentLevel, s.Player.Health, s.Player.Attack, width, height))
+	err := s.Leaderboard.Load(s.Config.BoardFile)
+	if err != nil {
+		s.Logger.Warn("Failed to load existing leaderboard. Creating a new one...", "path", s.Config.BoardFile, "err", err)
+		s.Leaderboard.Records = make([]leaderboard.Record, 0)
 	}
+
+	s.Logger.Info("Adding leaderboard entry...", "score", s.Score)
+	s.Leaderboard.Add(
+		"anon",
+		s.Score,
+		s.GetDetails(),
+	)
+}
+
+func (s *GameOverScene) GetDetails() string {
+	width, height := s.Renderer.Size()
+	return fmt.Sprintf(
+		"%dW*%dH|L%d@%dBL|%.1fBH|%.1fBAH|%.1fBA|(%.2fBD * %.1fBDM)|%dBS",
+		width, height,
+		s.CurrentLevel, s.Config.BaseLevel,
+		s.Config.BasePlayerHealth, s.Config.BaseAlienHealth,
+		s.Config.BasePlayerAttack, s.Config.BaseDifficulty, s.Config.BaseDifficultyMultiplier, s.Config.BaseScore,
+	)
 }
 
 func (s *GameOverScene) Draw(renderer *render.Renderer) {
@@ -430,7 +442,7 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 	_ = renderer.DrawText(fmt.Sprintf("%s - %s", s.Config.Title, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
 	if s.showOnBlink {
 		_ = renderer.DrawText(
-			fmt.Sprintf("Score: %d | Level: %d", s.Score, s.CurrentLevel),
+			fmt.Sprintf("%d | %s > %s", s.Score, "anon", s.GetDetails()),
 			startX,
 			int(float64(height)*scoreOffset),
 			render.ColorMagenta,
@@ -442,7 +454,7 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 	_ = renderer.DrawText("Top Scores:", startX, leaderboardY, render.ColorBlue)
 	topScores := s.Leaderboard.TopScores(5)
 	for i, entry := range topScores {
-		_ = renderer.DrawText(fmt.Sprintf("%d. %s: %d | %s", i+1, entry.Name, entry.Score, entry.Details), startX, leaderboardY+(i+1)*lineSpacing, render.ColorWhite)
+		_ = renderer.DrawText(fmt.Sprintf("%d | %s > %s", entry.Score, entry.Name, entry.Details), startX, leaderboardY+(i+1)*lineSpacing, render.ColorWhite)
 	}
 
 	// Draw controls

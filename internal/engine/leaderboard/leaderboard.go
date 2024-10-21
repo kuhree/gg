@@ -84,7 +84,7 @@ func (b *Board) TopScores(n int) []Record {
 	})
 
 	if n > len(b.Records) {
-		n = len(b.Records) - 1
+		n = len(b.Records)
 	}
 
 	return b.Records[:n]
