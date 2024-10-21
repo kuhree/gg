@@ -71,8 +71,9 @@ type Game struct {
 	Leaderboard *leaderboard.Board
 
 	// Game-specific ui/state/debugging
-	Config *Config
-	Debug  bool
+	Config  *Config
+	Debug   bool
+	Overlay bool
 
 	// Game-specific state
 	Score        int
@@ -87,7 +88,7 @@ type Game struct {
 }
 
 // NewGame creates a new instance of the Space Invaders game
-func NewGame(width, height int, workDir string, debug bool) (*Game, error) {
+func NewGame(width, height int, workDir string, debug bool, overlay bool) (*Game, error) {
 	logger := utils.Logger
 	renderer := render.NewRenderer(width, height)
 	scenes := scenes.NewManager()
@@ -113,6 +114,7 @@ func NewGame(width, height int, workDir string, debug bool) (*Game, error) {
 		Config:      config,
 		Leaderboard: board,
 		Debug:       debug,
+		Overlay:     overlay,
 		Scenes:      scenes,
 		Player: &Player{
 			GameObject: GameObject{

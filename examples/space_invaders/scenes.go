@@ -197,7 +197,7 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 		playerColor,
 	)
 
-	s.drawObjOverlay(&player.GameObject, playerColor, OverlayOpts{Health: s.Debug, Attack: s.Debug})
+	s.drawObjOverlay(&player.GameObject, playerColor, OverlayOpts{})
 
 	// Draw aliens
 	for _, alien := range s.Aliens {
@@ -220,7 +220,7 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 			alienColor,
 		)
 
-		s.drawObjOverlay(&alien.GameObject, alienColor, OverlayOpts{Health: true, Attack: s.Debug})
+		s.drawObjOverlay(&alien.GameObject, alienColor, OverlayOpts{})
 	}
 
 	// Draw projectiles
@@ -235,7 +235,7 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 			projectileColor,
 		)
 
-		s.drawObjOverlay(&projectile.GameObject, render.ColorWhite, OverlayOpts{Health: s.Debug, Attack: true})
+		s.drawObjOverlay(&projectile.GameObject, render.ColorWhite, OverlayOpts{})
 	}
 
 	// Draw barriers
@@ -251,7 +251,7 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 			barrierColor,
 		)
 
-		s.drawObjOverlay(&barrier.GameObject, render.ColorWhite, OverlayOpts{Health: true, Attack: s.Debug})
+		s.drawObjOverlay(&barrier.GameObject, render.ColorWhite, OverlayOpts{Health: true})
 	}
 
 	// Draw score, level, lives...
@@ -272,7 +272,7 @@ type OverlayOpts struct {
 func (s *PlayingScene) drawObjOverlay(obj *GameObject, color render.Color, opts OverlayOpts) {
 	_, healthColor := s.getHealthInfo(obj.Health, obj.MaxHealth)
 
-	if opts.Health {
+	if s.Overlay || opts.Health {
 		_ = s.Renderer.DrawText(
 			fmt.Sprintf("%.f", math.Round(obj.Health)),
 			int(obj.Position.X-obj.Width/2),
@@ -281,7 +281,7 @@ func (s *PlayingScene) drawObjOverlay(obj *GameObject, color render.Color, opts 
 		)
 	}
 
-	if opts.Attack {
+	if s.Overlay || opts.Attack {
 		_ = s.Renderer.DrawText(
 			fmt.Sprintf("%.f", math.Round(obj.Attack)),
 			int(obj.Position.X-obj.Width/2),
