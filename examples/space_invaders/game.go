@@ -12,20 +12,15 @@ import (
 )
 
 const (
-	TITLE            = "Space Invaders"
-	LEADERBOARD_FILE = "./space_invaders.json"
-)
-
-const (
 	MainMenuSceneID scenes.SceneID = iota
 	PlayingSceneID
-	GameOverSceneID
 	PauseMenuSceneID
+	GameOverSceneID
 )
 
 var BaseConfig = Config{
 	Title:      "Space Invaders",
-	WorkDir:    "spaceinvaders",
+	GameDir:    "spaceinvaders",
 	ConfigFile: "config.json",
 	BoardFile:  "board.json",
 
@@ -33,9 +28,12 @@ var BaseConfig = Config{
 	BarrierYOffset: 7,
 	AlienYOffset:   3,
 
-	BaseLevel: 1,
-	BaseScore: 0,
-	BaseLives: 3,
+	BaseScore:                0,
+	BaseLives:                3,
+	BaseLevel:                1,
+	BaseLevelStep:            1,
+	BaseDifficulty:           1.0,
+	BaseDifficultyMultiplier: 0.1,
 
 	BasePlayerSize:   2.0,
 	BasePlayerSpeed:  1.0,
@@ -79,7 +77,6 @@ type Game struct {
 	// Game-specific state
 	Score        int
 	CurrentLevel int
-	Mode         int
 
 	// Game-specific objects
 	Player            *Player
@@ -89,28 +86,33 @@ type Game struct {
 	BarriersCountLast int
 }
 
-// Game-specific ui/state/debugging
-
 // NewGame creates a new instance of the Space Invaders game
-func NewGame(width, height int, workDir string, debug bool) *Game {
+func NewGame(width, height int, workDir string, debug bool) (*Game, error) {
 	logger := utils.Logger
 	renderer := render.NewRenderer(width, height)
+	scenes := scenes.NewManager()
 
 	config, err := NewConfig(workDir, &BaseConfig)
 	if err != nil {
-		logger.Error("Failed to load config.", "err", err)
-		return nil
+		return nil, err
 	} else {
 		logger.Info("Config loaded!", "path", config.ConfigFile, "config", config)
 	}
 
+	board, err := leaderboard.NewBoard(config.BoardFile)
+	if err != nil {
+		return nil, err
+	} else {
+		logger.Info("Board loaded!", "path", config.BoardFile, "board", board)
+	}
 
 	game := &Game{
-		Renderer:     renderer,
-		Logger:       logger,
-		Config:       config,
-		CurrentLevel: config.BaseLevel,
-		Debug:        debug,
+		Renderer:    renderer,
+		Logger:      logger,
+		Config:      config,
+		Leaderboard: board,
+		Debug:       debug,
+		Scenes:      scenes,
 		Player: &Player{
 			GameObject: GameObject{
 				Position: Vector2D{X: float64(width) / 2, Y: float64(height) - float64(config.PlayerYOffset)},
@@ -120,35 +122,25 @@ func NewGame(width, height int, workDir string, debug bool) *Game {
 				Width:    config.BasePlayerSize,
 				Height:   config.BasePlayerSize,
 			},
+
+			Lives: config.BaseLives,
 		},
 	}
 
-	return game
+	return game, nil
 }
 
 // Init initializes the game
 func (g *Game) Init() error {
 	g.Logger.Info(fmt.Sprintf("%s - Game initializing...", g.Config.Title))
 
-	slog.Info(fmt.Sprintf("%s - Loading leaderboard...", g.Config.Title), "path", g.Config.BoardFile)
-	board, err := leaderboard.NewBoard(g.Config.BoardFile)
-	if err != nil {
-		g.Logger.Error("Failed to load board.", "err", err)
-		return nil
-	} else {
-		g.Logger.Info("Board loaded!", "path", g.Config.BoardFile)
-	}
-
-	g.Leaderboard = board
-	g.Logger.Info(fmt.Sprintf("%s - Leaderboard loaded!", g.Config.Title), "path", g.Config.BoardFile)
-
 	g.Logger.Info(fmt.Sprintf("%s - Adding Scenes", g.Config.Title))
-	g.Scenes = scenes.NewManager()
 	g.Scenes.AddScene(MainMenuSceneID, NewMainMenuScene(g))
 	g.Scenes.AddScene(PlayingSceneID, NewPlayingScene(g))
 	g.Scenes.AddScene(GameOverSceneID, NewGameOverScene(g))
 	g.Scenes.AddScene(PauseMenuSceneID, NewPauseMenuScene(g))
 	g.Scenes.ChangeScene(MainMenuSceneID)
+	g.Logger.Info(fmt.Sprintf("%s - Scenes loaded!", g.Config.Title), "startScene", MainMenuSceneID)
 
 	g.Logger.Info(fmt.Sprintf("%s - Game initialized", g.Config.Title))
 	return nil

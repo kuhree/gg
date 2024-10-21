@@ -237,7 +237,11 @@ func (s *PlayingScene) updateCollisions() {
 					s.Projectiles[i].Health -= alien.Health
 				}
 
+				score := alien.MaxHealth
 				s.Aliens[j].Health -= projectile.Attack
+				if alien.Health <= 0 {
+					s.increaseScore(int(score))
+				}
 			}
 		}
 
@@ -313,21 +317,11 @@ func (s *PlayingScene) killTheDead() {
 }
 
 // updateGameState determines if the game should end
-func (s *PlayingScene) updateGameState(aliensCountPrev int) {
+func (s *PlayingScene) updateGameState() {
 	width, height := s.Renderer.Size()
-	aBeforeCollision, aAfterCollision := aliensCountPrev, len(s.Aliens)
-	aDestroyed := aBeforeCollision - aAfterCollision
-	if aDestroyed > 0 {
-		for i := aDestroyed; i > 0; i-- {
-			s.Logger.Info("Alien Destroyed! Increasing score...", "score", s.Score, "newScore", s.Score+1)
-			s.Score++
-		}
-	}
 
 	if len(s.Aliens) == 0 {
-		s.Logger.Info("Level cleared! Advancing...", "newLevel", s.CurrentLevel)
-		s.CurrentLevel++
-		s.startWave()
+		s.increaseLevel()
 		return
 	}
 
@@ -356,7 +350,7 @@ func (s *PlayingScene) startWave() {
 	s.Aliens = nil
 	s.Projectiles = nil
 
-	difficultyMultiplier := 1.0 + float64(s.CurrentLevel)*0.1
+	difficultyMultiplier := s.difficulty()
 	s.setupLevelPlayer(difficultyMultiplier)
 	s.setupLevelAliens(difficultyMultiplier)
 	s.setupLevelBarriers(difficultyMultiplier)
@@ -365,8 +359,24 @@ func (s *PlayingScene) startWave() {
 		"level", s.CurrentLevel,
 		"aliens", len(s.Aliens),
 		"barriers", len(s.Barriers),
-		"alienSpeed", s.Config.BaseAlienSpeed*difficultyMultiplier,
 	)
+}
+
+func (s *PlayingScene) increaseScore(delta int) int {
+	s.Logger.Info("Increasing score!", "score", s.Score, "delta", delta, "newScore", s.Score+delta)
+	s.Score += delta
+	return s.Score
+}
+
+func (s *PlayingScene) increaseLevel() {
+	s.Logger.Info("Level cleared! Advancing...", "newLevel", s.CurrentLevel+s.Config.BaseLevelStep)
+	s.CurrentLevel += s.Config.BaseLevelStep
+
+	s.startWave()
+}
+
+func (s *PlayingScene) difficulty() float64 {
+	return s.Config.BaseDifficulty + float64(s.CurrentLevel)*s.Config.BaseDifficultyMultiplier
 }
 
 func (s *PlayingScene) setupLevelPlayer(difficultyMultiplier float64) {

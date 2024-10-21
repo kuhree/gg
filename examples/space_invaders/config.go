@@ -10,7 +10,7 @@ import (
 // Config holds all the game configuration values
 type Config struct {
 	Title      string
-	WorkDir    string
+	GameDir    string
 	BoardFile  string
 	ConfigFile string
 
@@ -18,9 +18,13 @@ type Config struct {
 	BarrierYOffset int
 	AlienYOffset   int
 
-	BaseLevel int
-	BaseScore int
-	BaseLives int
+	BaseLevel     int
+	BaseLevelStep int
+	BaseScore     int
+	BaseLives     int
+
+	BaseDifficulty           float64
+	BaseDifficultyMultiplier float64
 
 	BasePlayerSize   float64
 	BasePlayerSpeed  float64
@@ -51,17 +55,17 @@ type Config struct {
 
 func NewConfig(workDir string, baseConfig *Config) (*Config, error) {
 	config := &Config{}
-	config.WorkDir = path.Join(workDir, "spaceinvaders")
-	config.ConfigFile = path.Join(config.WorkDir, "config.json")
-	config.BoardFile = path.Join(config.WorkDir, "board.json")
+	config.GameDir = path.Join(workDir, "spaceinvaders")
+	config.ConfigFile = path.Join(config.GameDir, "config.json")
+	config.BoardFile = path.Join(config.GameDir, "board.json")
 
 	err := config.Load()
 	if err != nil {
 		if os.IsNotExist(err) {
 			base := baseConfig
-			base.WorkDir = path.Join(workDir, base.WorkDir)
-			base.ConfigFile = path.Join(base.WorkDir, base.ConfigFile)
-			base.BoardFile = path.Join(base.WorkDir, base.BoardFile)
+			base.GameDir = path.Join(workDir, base.GameDir)
+			base.ConfigFile = path.Join(base.GameDir, base.ConfigFile)
+			base.BoardFile = path.Join(base.GameDir, base.BoardFile)
 
 			err = base.Save()
 			if err != nil {

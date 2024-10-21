@@ -10,17 +10,17 @@ import (
 
 // GameLoop manages the main game loop
 type GameLoop struct {
-	game     Game
-	logger   *slog.Logger
-	running  bool
+	game      Game
+	logger    *slog.Logger
+	running   bool
 	keyEvents chan keyboard.KeyEvent
 }
 
 // NewGameLoop creates a new GameLoop
 func NewGameLoop(game Game) *GameLoop {
 	return &GameLoop{
-		game:     game,
-		logger:  utils.Logger,
+		game:      game,
+		logger:    utils.Logger,
 		keyEvents: make(chan keyboard.KeyEvent, 10), // Buffer for key events
 	}
 }

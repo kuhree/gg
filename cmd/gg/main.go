@@ -39,15 +39,28 @@ var games = []struct {
 	{"Frames", func() error {
 		game := frames.NewGame(width, height)
 
-		gameLoop := core.NewGameLoop(game)
-		return gameLoop.Run()
+		gl := core.NewGameLoop(game)
+		if err := gl.Run(); err != nil {
+			return err
+		}
+		defer gl.Stop()
+
+		return nil
 	}},
 
 	{"Space Invaders", func() error {
-		game := space_invaders.NewGame(width, height, workDir, debug)
+		game, err := space_invaders.NewGame(width, height, workDir, debug)
+		if err != nil {
+			return err
+		}
 
-		gameLoop := core.NewGameLoop(game)
-		return gameLoop.Run()
+		gl := core.NewGameLoop(game)
+		if err := gl.Run(); err != nil {
+			return err
+		}
+		defer gl.Stop()
+
+		return nil
 	}},
 	{"Pong", notImplemented},
 	{"Tetris", notImplemented},
