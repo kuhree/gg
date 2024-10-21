@@ -172,6 +172,7 @@ func (s *PlayingScene) Exit() {
 
 func (s *PlayingScene) Update(dt float64) {
 	s.BaseScene.Update(dt)
+	s.updateCollectibles(dt)
 	s.updateAliens(dt)
 	s.updateAlienFiringSquad(dt)
 	s.updateProjectiles(dt)
@@ -199,15 +200,29 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 
 	s.drawObjOverlay(&player.GameObject, playerColor, OverlayOpts{})
 
+	// Draw collectibles
+	for _, collectable := range s.Collectables {
+		char, color := s.getCollectableInfo(collectable)
+
+		_ = s.Renderer.DrawRect(
+			int(collectable.Position.X-collectable.Width/2),
+			int(collectable.Position.Y-collectable.Height/2),
+			int(collectable.Width),
+			int(collectable.Height),
+			char,
+			color,
+		)
+	}
+
 	// Draw aliens
 	for _, alien := range s.Aliens {
-		alienChar, alienColor := s.getAlienInfo(alien)
+		char, color := s.getAlienInfo(alien)
 
 		if s.Debug {
 			_ = s.Renderer.DrawText(fmt.Sprintf("%d", alien.AlienType),
 				int(alien.Position.X-alien.Width/2),
 				int(alien.Position.Y-alien.Height/2)-1,
-				alienColor,
+				color,
 			)
 		}
 
@@ -216,23 +231,23 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 			int(alien.Position.Y-alien.Height/2),
 			int(alien.Width),
 			int(alien.Height),
-			alienChar,
-			alienColor,
+			char,
+			color,
 		)
 
-		s.drawObjOverlay(&alien.GameObject, alienColor, OverlayOpts{})
+		s.drawObjOverlay(&alien.GameObject, color, OverlayOpts{})
 	}
 
 	// Draw projectiles
 	for _, projectile := range s.Projectiles {
-		projectileChar, projectileColor := s.getProjectileInfo(projectile)
+		char, color := s.getProjectileInfo(projectile)
 		_ = s.Renderer.DrawRect(
 			int(projectile.Position.X-projectile.Width/2),
 			int(projectile.Position.Y-projectile.Height/2),
 			int(projectile.Width),
 			int(projectile.Height),
-			projectileChar,
-			projectileColor,
+			char,
+			color,
 		)
 
 		s.drawObjOverlay(&projectile.GameObject, render.ColorWhite, OverlayOpts{})
@@ -240,15 +255,15 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 
 	// Draw barriers
 	for _, barrier := range s.Barriers {
-		barrierChar, barrierColor := s.getBarrierInfo(barrier.Health, barrier.MaxHealth)
+		char, color := s.getBarrierInfo(barrier.Health, barrier.MaxHealth)
 
 		_ = s.Renderer.DrawRect(
 			int(barrier.Position.X-barrier.Width/2),
 			int(barrier.Position.Y-barrier.Height/2),
 			int(barrier.Width),
 			int(barrier.Height),
-			barrierChar,
-			barrierColor,
+			char,
+			color,
 		)
 
 		s.drawObjOverlay(&barrier.GameObject, render.ColorWhite, OverlayOpts{Health: true})

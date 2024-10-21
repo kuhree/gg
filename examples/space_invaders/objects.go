@@ -12,9 +12,9 @@ type GameObject struct {
 	Height   float64
 	Width    float64
 
-	Health float64
+	Health    float64
 	MaxHealth float64
-	Attack float64
+	Attack    float64
 	MaxAttack float64
 }
 
@@ -51,4 +51,12 @@ type Projectile struct {
 // Barrier represents a defensive structure
 type Barrier struct {
 	GameObject
+}
+
+type CollectableType int
+
+type Collectable struct {
+	GameObject
+	CollectableType CollectableType
+	Duration        float64
 }
