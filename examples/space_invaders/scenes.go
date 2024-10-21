@@ -341,11 +341,11 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 		s.movePlayer(0, -1)
 	case core.KeyDown:
 		s.movePlayer(0, 1)
-	case core.KeyEscape:
+	case core.KeyEscape, core.KeyTab:
 		s.Scenes.ChangeScene(PauseMenuSceneID)
 	default:
 		switch input.Rune {
-		case 'q', 'Q':
+		case 'q', 'Q', 'p', 'P':
 			s.Scenes.ChangeScene(PauseMenuSceneID)
 		case 'w', 'W':
 			s.movePlayer(0, -1)
@@ -392,7 +392,6 @@ func (s *PauseMenuScene) Draw(renderer *render.Renderer) {
 	_ = renderer.DrawText("Controls:", startX, controlsY, render.ColorBlue)
 	_ = renderer.DrawText("Press ESC to resume", startX, controlsY+lineSpacing, render.ColorWhite)
 	_ = renderer.DrawText("Press Q to quit", startX, controlsY+2*lineSpacing, render.ColorWhite)
-	_ = renderer.DrawText("Press R to Restart", startX, controlsY+3*lineSpacing, render.ColorWhite)
 }
 
 func (s *PauseMenuScene) HandleInput(input core.InputEvent) error {
@@ -404,11 +403,6 @@ func (s *PauseMenuScene) HandleInput(input core.InputEvent) error {
 		case 'q', 'Q':
 			s.Scenes.ChangeScene(GameOverSceneID)
 			return core.ErrQuitGame
-		case 'r', 'R':
-			s.Player.Lives++
-			s.Player.Health = 0
-			s.Logger.Info("Restarting level: Player given an extra life and health set to zero")
-			s.Scenes.ChangeScene(PlayingSceneID)
 		}
 	}
 

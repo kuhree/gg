@@ -17,14 +17,15 @@ const (
 
 // Key constants
 const (
-	KeyUp      = keyboard.KeyArrowUp
+	KeyUp        = keyboard.KeyArrowUp
 	KeyDown      = keyboard.KeyArrowDown
 	KeyLeft      = keyboard.KeyArrowLeft
 	KeyRight     = keyboard.KeyArrowRight
 	KeySpace     = keyboard.KeySpace
 	KeyEnter     = keyboard.KeyEnter
 	KeyBackspace = keyboard.KeyBackspace
-	KeyEscape = keyboard.KeyEsc
+	KeyEscape    = keyboard.KeyEsc
+	KeyTab       = keyboard.KeyTab
 
 	KeyQ = rune(113)
 	KeyE = rune(101)

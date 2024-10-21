@@ -500,7 +500,14 @@ func (s *PlayingScene) setupLevelPlayer(difficultyMultiplier float64) {
 	width, height := s.Renderer.Size()
 
 	s.Player.Position = Vector2D{X: float64(width) / 2, Y: float64(height - s.Config.PlayerYOffset)}
-	s.Player.Attack = s.Config.BasePlayerAttack * max(1.1, difficultyMultiplier*0.80)
+	health := s.Config.BasePlayerHealth * max(1.1, difficultyMultiplier*0.80)
+	attack := s.Config.BasePlayerAttack * max(1.1, difficultyMultiplier*0.80)
+
+	s.Player.Health = health
+	s.Player.MaxHealth = health
+
+	s.Player.Attack = attack
+	s.Player.MaxAttack = attack
 }
 
 func (s *PlayingScene) setupLevelAliens(difficultyMultiplier float64) {
