@@ -26,7 +26,6 @@ type Config struct {
 	BaseDifficulty           float64
 	BaseDifficultyMultiplier float64
 
-	BaseCollectibleSpawnChance   float64
 	BaseCollectibleDuration      float64
 	BaseCollectableSpawnInterval float64
 	BaseMaxCollectables          int

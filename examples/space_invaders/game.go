@@ -35,7 +35,6 @@ var BaseConfig = Config{
 	BaseDifficulty:           1.0,
 	BaseDifficultyMultiplier: 0.1,
 
-	BaseCollectibleSpawnChance:   1.0,
 	BaseCollectibleDuration:      10.0,
 	BaseCollectableSpawnInterval: 5.0,
 	BaseMaxCollectables:          3,

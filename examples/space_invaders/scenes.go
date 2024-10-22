@@ -142,7 +142,7 @@ func (s *MainMenuScene) HandleInput(input core.InputEvent) error {
 	switch input.Key {
 	case core.KeyEnter:
 		s.Logger.Info("Starting new game")
-		s.CurrentLevel = s.Config.BaseLevel
+		s.CurrentLevel = s.Config.BaseLevel - s.Config.BaseLevelStep
 		s.Score = s.Config.BaseScore
 		s.Player.Health = s.Config.BasePlayerHealth
 		s.Player.MaxHealth = s.Config.BasePlayerHealth
@@ -161,15 +161,6 @@ func (s *MainMenuScene) HandleInput(input core.InputEvent) error {
 }
 
 // PlayingScene methods
-
-func (s *PlayingScene) Enter() {
-	s.BaseScene.Enter()
-	// s.startWave()
-}
-
-func (s *PlayingScene) Exit() {
-	s.BaseScene.Exit()
-}
 
 func (s *PlayingScene) Update(dt float64) {
 	s.BaseScene.Update(dt)
@@ -273,10 +264,14 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 	_ = s.Renderer.DrawText(fmt.Sprintf("Score: %d", s.Score), 1, 1, render.ColorWhite)
 	_ = s.Renderer.DrawText(fmt.Sprintf("Level: %d", s.CurrentLevel), 1, 2, render.ColorWhite)
 	_ = s.Renderer.DrawText(fmt.Sprintf("Enemies: %d", len(s.Aliens)), 1, 3, render.ColorWhite)
+	if s.Overlay || s.Debug {
+		_ = s.Renderer.DrawText(fmt.Sprintf("Timer: %.2f / %.2f", s.collectableSpawnTimer, s.Config.BaseCollectableSpawnInterval), 1, 4, render.ColorWhite)
+	}
 
 	_ = s.Renderer.DrawText(fmt.Sprintf("Health: %.2f", player.Health), width-13, 1, playerColor)
 	_ = s.Renderer.DrawText(fmt.Sprintf("Attack: %.2f", player.Attack), width-12, 2, render.ColorWhite)
 	_ = s.Renderer.DrawText(fmt.Sprintf("Lives: %d", player.Lives), width-8, 3, render.ColorWhite)
+
 }
 
 type OverlayOpts struct {
