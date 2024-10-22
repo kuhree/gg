@@ -1,4 +1,4 @@
-package space_invaders
+package gameoflife
 
 import (
 	"fmt"
@@ -22,8 +22,8 @@ const (
 
 type Game struct {
 	// Internal engine stuff
-	Width       int
 	Height      int
+	Width       int
 	Renderer    *render.Renderer
 	Logger      *slog.Logger
 	Scenes      *scenes.Manager
@@ -37,18 +37,9 @@ type Game struct {
 	// Game-specific state
 	Score        int
 	CurrentLevel int
-
-	// Game-specific objects
-	Player            *Player
-	Aliens            []*Alien
-	Projectiles       []*Projectile
-	Barriers          []*Barrier
-	BarriersCountLast int
-	Collectables      []*Collectable
-	ActiveEffects     map[CollectableType]float64
 }
 
-// NewGame creates a new instance of the Space Invaders game
+// NewGame creates a new instance of the game
 func NewGame(width, height int, workDir string, debug bool, overlay bool) (*Game, error) {
 	logger := utils.Logger
 	renderer := render.NewRenderer(width, height, render.DefaultPalette)
@@ -70,29 +61,15 @@ func NewGame(width, height int, workDir string, debug bool, overlay bool) (*Game
 	}
 
 	game := &Game{
-		Width:         width,
-		Height:        height,
-		Renderer:      renderer,
-		Logger:        logger,
-		Config:        config,
-		Leaderboard:   board,
-		Debug:         debug,
-		Collectables:  make([]*Collectable, 0),
-		ActiveEffects: make(map[CollectableType]float64),
-		Overlay:       overlay,
-		Scenes:        scenes,
-		Player: &Player{
-			GameObject: GameObject{
-				Position: Vector2D{X: float64(width) / 2, Y: float64(height) - float64(config.PlayerYOffset)},
-				Speed:    Vector2D{X: config.BasePlayerSpeed, Y: config.BasePlayerSpeed},
-				Health:   config.BasePlayerHealth,
-				Attack:   config.BasePlayerAttack,
-				Width:    config.BasePlayerSize,
-				Height:   config.BasePlayerSize,
-			},
-
-			Lives: config.BaseLives,
-		},
+		Height:      height,
+		Width:       width,
+		Renderer:    renderer,
+		Logger:      logger,
+		Config:      config,
+		Leaderboard: board,
+		Debug:       debug,
+		Overlay:     overlay,
+		Scenes:      scenes,
 	}
 
 	return game, nil

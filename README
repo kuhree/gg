@@ -21,15 +21,7 @@ GG is a bunch of classic games written in Go. It's designed to create classic ar
 The `examples/` directory contains implementations of classic 2D games, including:
 
 1. Space Invaders
-2. Pong\*
-3. Tetris\*
-4. Pac-Man\*
-5. Snake\*
-6. Breakout\*
-7. Asteroids\*
-8. Frogger\*
-9. Galaga\*
-10. Centipede\*
+2. ???
 
 > \*Not yet implemented
 
@@ -48,16 +40,17 @@ The `examples/` directory contains implementations of classic 2D games, includin
 The game launcher can be used in the following ways:
 
 - `gg`: Launch a menu to choose games
-- `glf [game]`: Launch directly into a specific game
-- `--dev`: Enable Debug logging
+- `gg [game]`: Launch directly into a specific game
+- `--debug`: Enable Debug logging
 
 While in game:
 
 - Use arrow keys or WASD for movement
 - Spacebar for primary action (shoot, jump, etc.)
 - 'P' to pause the game
-- 'ESC' to quit the current game and return to the main menu
-- 'F1' to toggle dev modetes
+- 'ESC/Q' to pause/quit the current game 
+- 'F1' to toggle dev modez
+- 'F2' to toggle dev overlays
 
 In dev mode:
 

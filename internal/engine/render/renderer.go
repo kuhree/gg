@@ -3,7 +3,52 @@ package render
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+)
+
+const (
+	// Block Elements
+	FullBlock          = '█'
+	LightShade         = '░'
+	MediumShade        = '▒'
+	DarkShade          = '▓'
+	UpperHalfBlock     = '▀'
+	LowerHalfBlock     = '▄'
+	LeftHalfBlock      = '▌'
+	RightHalfBlock     = '▐'
+	QuadrantLowerLeft  = '▖'
+	QuadrantLowerRight = '▗'
+	QuadrantUpperLeft  = '▘'
+	QuadrantUpperRight = '▝'
+
+	// Box Drawing Characters
+	LightHorizontal        = '─'
+	LightVertical          = '│'
+	LightDownAndRight      = '┌'
+	LightDownAndLeft       = '┐'
+	LightUpAndRight        = '└'
+	LightUpAndLeft         = '┘'
+	LightVerticalAndRight  = '├'
+	LightVerticalAndLeft   = '┤'
+	LightHorizontalAndDown = '┬'
+	LightHorizontalAndUp   = '┴'
+	LightCross             = '┼'
+
+	// Geometric Shapes
+	BlackCircle   = '●'
+	BlackDot      = '•'
+	WhiteCircle   = '○'
+	BlackSquare   = '■'
+	WhiteSquare   = '□'
+	BlackTriangle = '▲'
+	WhiteTriangle = '△'
+
+	// Arrows
+	LeftArrow  = '←'
+	UpArrow    = '↑'
+	RightArrow = '→'
+	DownArrow  = '↓'
 )
 
 type Color int
@@ -30,6 +75,8 @@ const (
 type ColorInfo struct {
 	Name string
 	ANSI string
+	// RGB [3]int
+	// RGBA [4]int
 }
 
 type Palette struct {
@@ -57,50 +104,6 @@ var DefaultPalette = Palette{
 	},
 }
 
-const (
-	// Block Elements
-	FullBlock       = '█'
-	LightShade      = '░'
-	MediumShade     = '▒'
-	DarkShade       = '▓'
-	UpperHalfBlock  = '▀'
-	LowerHalfBlock  = '▄'
-	LeftHalfBlock   = '▌'
-	RightHalfBlock  = '▐'
-	QuadrantLowerLeft  = '▖'
-	QuadrantLowerRight = '▗'
-	QuadrantUpperLeft  = '▘'
-	QuadrantUpperRight = '▝'
-
-	// Box Drawing Characters
-	LightHorizontal = '─'
-	LightVertical   = '│'
-	LightDownAndRight = '┌'
-	LightDownAndLeft  = '┐'
-	LightUpAndRight   = '└'
-	LightUpAndLeft    = '┘'
-	LightVerticalAndRight = '├'
-	LightVerticalAndLeft  = '┤'
-	LightHorizontalAndDown = '┬'
-	LightHorizontalAndUp   = '┴'
-	LightCross = '┼'
-
-	// Geometric Shapes
-	BlackCircle = '●'
-	BlackDot = '•'
-	WhiteCircle = '○'
-	BlackSquare = '■'
-	WhiteSquare = '□'
-	BlackTriangle = '▲'
-	WhiteTriangle = '△'
-
-	// Arrows
-	LeftArrow  = '←'
-	UpArrow    = '↑'
-	RightArrow = '→'
-	DownArrow  = '↓'
-)
-
 // Renderer handles the ASCII rendering for the game
 type Renderer struct {
 	width   int
@@ -111,7 +114,7 @@ type Renderer struct {
 }
 
 // NewRenderer creates a new Renderer with the specified dimensions
-func NewRenderer(width, height int) *Renderer {
+func NewRenderer(width, height int, pal Palette) *Renderer {
 	buffer := make([][]rune, height)
 	colors := make([][]Color, height)
 	for i := range buffer {
@@ -128,7 +131,7 @@ func NewRenderer(width, height int) *Renderer {
 		height:  height,
 		buffer:  buffer,
 		colors:  colors,
-		palette: DefaultPalette,
+		palette: pal,
 	}
 }
 
@@ -184,15 +187,35 @@ func (r *Renderer) DrawRect(x, y, width, height int, char rune, color Color) err
 	return nil
 }
 
+func (r *Renderer) DrawBorder(color Color) {
+	for x := 0; x < r.width; x++ {
+		r.DrawChar(LightHorizontal, x, 0, color)
+		r.DrawChar(LightHorizontal, x, r.height-1, color)
+	}
+	for y := 0; y < r.height; y++ {
+		r.DrawChar(LightVertical, 0, y, color)
+		r.DrawChar(LightVertical, r.width-1, y, color)
+	}
+	r.DrawChar(LightDownAndRight, 0, 0, color)
+	r.DrawChar(LightDownAndLeft, r.width-1, 0, color)
+	r.DrawChar(LightUpAndRight, 0, r.height-1, color)
+	r.DrawChar(LightUpAndLeft, r.width-1, r.height-1, color)
+}
+
 // Render outputs the current buffer to the console
 func (r *Renderer) Render() {
+	fmt.Print("\033[H\033[2J") // Clear the console
+	r.DrawBorder(ColorWhite)
+
 	var sb strings.Builder
 	sb.Grow(r.width * r.height * 20) // Estimate capacity
 
+	// Move and hide the cursor
+	sb.WriteString("\033[H")    // move to top-left corner
+	sb.WriteString("\033[?25l") // hide the cursor completely
+
 	currentColor := ColorBlack
 	for y := 0; y < r.height; y++ {
-		sb.WriteString("\033[0m") // Reset color 
-
 		for x := 0; x < r.width; x++ {
 			if r.colors[y][x] != currentColor {
 				currentColor = r.colors[y][x]
@@ -200,9 +223,17 @@ func (r *Renderer) Render() {
 			}
 			sb.WriteRune(r.buffer[y][x])
 		}
-		sb.WriteRune('\n')
+		// Use explicit cursor positioning instead of newline
+		sb.WriteString(fmt.Sprintf("\033[%d;1H", y+2))
 	}
-	fmt.Print("\033[H\033[2J") // Clear the console
-	fmt.Print("\033[H") // Move cursor to top-left
+
+	// Write the entire buffer at once
+	os.Stdout.Write([]byte(sb.String()))
+	os.Stdout.Sync()
+
 	fmt.Print(sb.String())
+}
+
+func ShowCursor() {
+	fmt.Print("\033[?25h")
 }

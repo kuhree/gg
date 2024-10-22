@@ -1,19 +1,16 @@
 package space_invaders
 
 import (
-	"encoding/json"
 	"os"
-	"path"
-	"path/filepath"
+
+	"github.com/kuhree/gg/internal/engine/config"
 )
 
 // Config holds all the game configuration values
 type Config struct {
-	Title      string
-	GameDir    string
-	BoardFile  string
-	ConfigFile string
+	config.BaseConfig
 
+	TargetFPS      int
 	PlayerYOffset  int
 	BarrierYOffset int
 	AlienYOffset   int
@@ -58,61 +55,72 @@ type Config struct {
 	IntervalRandomFactor  float64
 }
 
-func NewConfig(workDir string, baseConfig *Config) (*Config, error) {
-	config := &Config{}
-	config.GameDir = path.Join(workDir, "spaceinvaders")
-	config.ConfigFile = path.Join(config.GameDir, "config.json")
-	config.BoardFile = path.Join(config.GameDir, "board.json")
+func NewConfig(workDir string) (*Config, error) {
+	cfg := &Config{
+		BaseConfig:     config.NewBaseConfig(workDir, "Space Invaders"),
+		PlayerYOffset:  3,
+		BarrierYOffset: 7,
+		AlienYOffset:   3,
 
-	err := config.Load()
-	if err != nil {
-		if os.IsNotExist(err) {
-			base := baseConfig
-			base.GameDir = path.Join(workDir, base.GameDir)
-			base.ConfigFile = path.Join(base.GameDir, base.ConfigFile)
-			base.BoardFile = path.Join(base.GameDir, base.BoardFile)
+		BaseScore:                1,
+		BaseLives:                3,
+		BaseLevel:                1,
+		BaseLevelStep:            1,
+		BaseDifficulty:           1.0,
+		BaseDifficultyMultiplier: 0.1,
 
-			err = base.Save()
-			if err != nil {
-				return nil, err
-			}
+		BaseCollectibleDuration:      10.0,
+		BaseCollectableSpawnInterval: 5.0,
+		BaseMaxCollectables:          3,
+		BaseCollectableSpeed:         1,
 
-			return base, nil
-		}
+		BasePlayerSize:   2.0,
+		BasePlayerSpeed:  1.0,
+		BasePlayerHealth: 10.0,
+		BasePlayerAttack: 5.0,
 
-		return nil, err
+		BaseAliensCount: 1,
+		BaseAlienSize:   2.0,
+		BaseAlienSpeed:  1.0,
+		BaseAlienHealth: 20.0,
+
+		BaseProjectileSize:   2.0,
+		BaseProjectileSpeed:  30.0,
+		BaseProjectileHealth: 10.0,
+
+		BaseBarrierCount:  10,
+		BaseBarrierSize:   2.0,
+		BaseBarrierHealth: 100.0,
+		BaseBarrierAttack: 0.0,
+
+		BaseShootInterval:     15.0,
+		MinShootInterval:      5.0,
+		ShootIntervalVariance: 20.0,
+		BaseShootChance:       0.2,
+		CooldownMultiplier:    1.5,
+		IntervalRandomFactor:  0.5,
 	}
 
-	return config, nil
+	err := config.LoadConfig(cfg)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+
+		// If the file doesn't exist, save the default config
+		err = config.SaveConfig(cfg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return cfg, nil
 }
 
 func (c *Config) Save() error {
-	filename := c.ConfigFile
-	if err := ensureDir(filename); err != nil {
-		return err
-	}
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	return json.NewEncoder(file).Encode(c)
+	return config.SaveConfig(c)
 }
 
 func (c *Config) Load() error {
-	filename := c.ConfigFile
-	if err := ensureDir(filename); err != nil {
-		return err
-	}
-	file, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	return json.NewDecoder(file).Decode(c)
-}
-
-func ensureDir(filename string) error {
-	dir := filepath.Dir(filename)
-	return os.MkdirAll(dir, 0755)
+	return config.LoadConfig(c)
 }

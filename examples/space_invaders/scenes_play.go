@@ -8,6 +8,7 @@ import (
 	"github.com/ojrac/opensimplex-go"
 
 	"github.com/kuhree/gg/internal/engine/render"
+	"github.com/kuhree/gg/internal/utils"
 )
 
 const (
@@ -120,9 +121,9 @@ func (s *PlayingScene) movePlayer(dx, dy int) {
 	newY := s.Player.Position.Y + float64(dy)*s.Player.Speed.Y
 
 	// Clamp the player's position to stay within the game boundaries
-	width, height := s.Renderer.Size()
-	newX = clamp(newX, float64(s.Player.Width)/2, float64(width)-float64(s.Player.Width)/2)
-	newY = clamp(newY, float64(s.Player.Height)/2, float64(height)-float64(s.Player.Height)/2)
+	width, height := s.Size()
+	newX = utils.Clamp(newX, float64(s.Player.Width)/2, float64(width)-float64(s.Player.Width)/2)
+	newY = utils.Clamp(newY, float64(s.Player.Height)/2, float64(height)-float64(s.Player.Height)/2)
 
 	s.Player.Position.X = newX
 	s.Player.Position.Y = newY
@@ -202,7 +203,7 @@ func (s *PlayingScene) updateCollectables(dt float64) {
 
 // updateAliens updates the positions of all aliens
 func (s *PlayingScene) updateAliens(dt float64) {
-	width, height := s.Renderer.Size()
+	width, height := s.Size()
 
 	for i, alien := range s.Aliens {
 		if alien.AlienType == BasicAlien && alien.Health > 0 && alien.Position.Y+float64(alien.Height)/2 >= float64(height) {
@@ -231,20 +232,25 @@ func (s *PlayingScene) updateAliens(dt float64) {
 			alien.Position.Y += math.Sin(alien.Position.X*0.1) * dt * 2
 		}
 
+		availableHeight := height
+		if alien.AlienType != BasicAlien {
+			availableHeight = height - s.Config.BarrierYOffset - (int(alien.Height) / 2) - 1
+		}
+
 		// Smooth boundary checks
 		if alien.Position.X-alien.Width/2 <= 0 || alien.Position.X+alien.Width/2 >= float64(width) {
 			// Gradually change direction
 			alien.Speed.X = -alien.Speed.X * 0.9
 		}
 
-		if alien.Position.Y-alien.Height/2 <= 0 || alien.Position.Y+alien.Height/2 >= float64(height) {
+		if alien.Position.Y-alien.Height/2 <= 0 || alien.Position.Y+alien.Height/2 >= float64(availableHeight) {
 			// Gradually change direction
 			alien.Speed.Y = -alien.Speed.Y * 0.9
 		}
 
 		// Ensure alien stays within bounds
-		alien.Position.X = clamp(alien.Position.X, alien.Width/2, float64(width)-alien.Width/2)
-		alien.Position.Y = clamp(alien.Position.Y, alien.Height/2, float64(height)-alien.Height/2)
+		alien.Position.X = utils.Clamp(alien.Position.X, alien.Width/2, float64(width)-alien.Width/2)
+		alien.Position.Y = utils.Clamp(alien.Position.Y, alien.Height/2, float64(availableHeight)-alien.Height/2)
 	}
 
 	// Shoott!
@@ -488,7 +494,7 @@ func (s *PlayingScene) difficulty() float64 {
 }
 
 func (s *PlayingScene) setupLevelPlayer(difficultyMultiplier float64) {
-	width, height := s.Renderer.Size()
+	width, height := s.Size()
 
 	s.Player.Position = Vector2D{X: float64(width) / 2, Y: float64(height - s.Config.PlayerYOffset)}
 	s.Player.Health += s.Config.BasePlayerHealth * max(1.1, difficultyMultiplier*0.80)
@@ -496,7 +502,7 @@ func (s *PlayingScene) setupLevelPlayer(difficultyMultiplier float64) {
 }
 
 func (s *PlayingScene) setupLevelAliens(difficultyMultiplier float64) {
-	width, height := s.Renderer.Size()
+	width, height := s.Size()
 
 	// Calculate number of aliens
 	alienCount := s.CurrentLevel + s.Config.BaseAliensCount*2
@@ -613,7 +619,7 @@ func (s *PlayingScene) generateAlienPositions(aliens []*Alien, width, height int
 
 func (s *PlayingScene) spawnCollectables() {
 
-	width, _ := s.Renderer.Size()
+	width, _ := s.Size()
 	collectableType := s.chooseCollectableType()
 	c := collectableTypes[collectableType]
 
@@ -658,7 +664,7 @@ func (s *PlayingScene) chooseCollectableType() CollectableType {
 func (s *PlayingScene) setupLevelBarriers(difficultyMultiplier float64) {
 
 	if len(s.Barriers) <= 0 {
-		width, height := s.Renderer.Size()
+		width, height := s.Size()
 		s.BarriersCountLast += 1
 
 		barrierCount := max(s.Config.BaseBarrierCount-int(difficultyMultiplier), 1)
