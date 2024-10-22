@@ -27,22 +27,22 @@ type CollectableAttributes struct {
 var collectableTypes = map[CollectableType]CollectableAttributes{
 	PowerUpHealth: {
 		Type:        PowerUpHealth,
-		SpawnChance: 1,
+		SpawnChance: 0.3,
 		Duration:    0,
 	},
 	PowerUpRapidFire: {
 		Type:        PowerUpRapidFire,
-		SpawnChance: 0.10,
+		SpawnChance: 0.2,
 		Duration:    10.0,
 	},
 	PowerUpMultiShot: {
 		Type:        PowerUpMultiShot,
-		SpawnChance: 0.10,
+		SpawnChance: 0.25,
 		Duration:    10.0,
 	},
 	PowerUpExtraLife: {
 		Type:        PowerUpExtraLife,
-		SpawnChance: 0.25,
+		SpawnChance: 0.1,
 		Duration:    0,
 	},
 	PowerUpBomb: {
@@ -627,9 +627,6 @@ func (s *PlayingScene) generateAlienPositions(aliens []*Alien, width, height int
 }
 
 func (s *PlayingScene) spawnCollectables() {
-	if rand.Float64() < s.Config.BaseCollectibleSpawnChance {
-		return // Don't spawn anything this time
-	}
 
 	width, _ := s.Renderer.Size()
 	collectableType := s.chooseCollectableType()
@@ -650,6 +647,7 @@ func (s *PlayingScene) spawnCollectables() {
 	}
 
 	s.Collectables = append(s.Collectables, collectable)
+	s.Logger.Debug("Spawned collectable", "type", c.Type, "position", collectable.Position)
 }
 
 func (s *PlayingScene) chooseCollectableType() CollectableType {
