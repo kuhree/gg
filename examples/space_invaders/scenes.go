@@ -264,9 +264,6 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 	_ = s.Renderer.DrawText(fmt.Sprintf("Score: %d", s.Score), 1, 1, render.ColorWhite)
 	_ = s.Renderer.DrawText(fmt.Sprintf("Level: %d", s.CurrentLevel), 1, 2, render.ColorWhite)
 	_ = s.Renderer.DrawText(fmt.Sprintf("Enemies: %d", len(s.Aliens)), 1, 3, render.ColorWhite)
-	if s.Overlay || s.Debug {
-		_ = s.Renderer.DrawText(fmt.Sprintf("Timer: %.2f / %.2f", s.collectableSpawnTimer, s.Config.BaseCollectableSpawnInterval), 1, 4, render.ColorWhite)
-	}
 
 	_ = s.Renderer.DrawText(fmt.Sprintf("Health: %.2f", player.Health), width-13, 1, playerColor)
 	_ = s.Renderer.DrawText(fmt.Sprintf("Attack: %.2f", player.Attack), width-12, 2, render.ColorWhite)
