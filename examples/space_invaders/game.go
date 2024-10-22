@@ -28,7 +28,7 @@ var BaseConfig = Config{
 	BarrierYOffset: 7,
 	AlienYOffset:   3,
 
-	BaseScore:                0,
+	BaseScore:                1,
 	BaseLives:                3,
 	BaseLevel:                1,
 	BaseLevelStep:            1,
