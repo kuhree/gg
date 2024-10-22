@@ -348,15 +348,6 @@ func (s *PlayingScene) updateCollisions() {
 			}
 		}
 
-		// projectile/collectable
-		for j := len(s.Collectables) - 1; j >= 0; j-- {
-			collectable := s.Collectables[j]
-			if isFromPlayer && s.collides(&projectile.GameObject, &collectable.GameObject) {
-				s.activateCollectable(collectable)
-				s.Collectables[j].Health = 0
-			}
-		}
-
 		// projectile/projectile
 		for j := len(s.Projectiles) - 1; j >= 0; j-- {
 			proj := s.Projectiles[j]
