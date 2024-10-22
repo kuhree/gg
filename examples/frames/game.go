@@ -12,6 +12,9 @@ import (
 
 // Game represents the Frames game state and logic
 type Game struct {
+	Width  int
+	Height int
+
 	renderer *render.Renderer
 	logger   *slog.Logger
 	fps      float64
@@ -20,9 +23,11 @@ type Game struct {
 
 // NewGame creates a new instance of the Frames game
 func NewGame(width, height int) *Game {
-	renderer := render.NewRenderer(width, height) // Create a 80x24 ASCII renderer
+	renderer := render.NewRenderer(width, height, render.DefaultPalette) // Create a 80x24 ASCII renderer
 
 	return &Game{
+		Width:    width,
+		Height:   height,
 		renderer: renderer,
 		logger:   utils.Logger,
 		lastTime: time.Now(),
@@ -38,17 +43,21 @@ func (g *Game) Update(dt float64) error {
 	return nil
 }
 
+func (g *Game) Size() (int, int) {
+	return g.Width, g.Height
+}
+
 // Draw renders the game state
 func (g *Game) Draw() {
 	g.renderer.Clear()
 	fpsText := fmt.Sprintf("FPS: %.2f", g.fps)
-	_ = g.renderer.DrawText(fpsText, 1, 1, render.ColorBlue)
+	_ = g.renderer.DrawText(fpsText, g.Width/2, (g.Height/2)-1, render.ColorBlue)
 	g.renderer.Render()
 }
 
 // HandleInput processes user input
 func (g *Game) HandleInput(input core.InputEvent) error {
-	if input.Key == core.KeyBackspace || input.Rune == core.KeyQ {
+	if input.Rune == core.KeyQ {
 		return core.ErrQuitGame
 	}
 	return nil

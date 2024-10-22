@@ -1,6 +1,6 @@
-package space_invaders
+package utils
 
-func clamp(value, min, max float64) float64 {
+func Clamp(value, min, max float64) float64 {
 	if value < min {
 		return min
 	}

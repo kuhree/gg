@@ -114,7 +114,7 @@ func NewGameOverScene(game *Game) *GameOverScene {
 // MainMenuScene methods
 
 func (s *MainMenuScene) Draw(renderer *render.Renderer) {
-	width, height := s.Renderer.Size()
+	width, height := s.Size()
 	startX := width / 10
 
 	const (
@@ -139,7 +139,7 @@ func (s *MainMenuScene) Draw(renderer *render.Renderer) {
 }
 
 func (s *MainMenuScene) HandleInput(input core.InputEvent) error {
-	switch input.Key {
+	switch input.Rune {
 	case core.KeyEnter:
 		s.Logger.Info("Starting new game")
 		s.CurrentLevel = s.Config.BaseLevel - s.Config.BaseLevelStep
@@ -149,12 +149,9 @@ func (s *MainMenuScene) HandleInput(input core.InputEvent) error {
 		s.Player.Lives = s.Config.BaseLives
 		s.Scenes.ChangeScene(PlayingSceneID)
 		return nil
-	default:
-		switch input.Rune {
-		case 'q', 'Q':
-			s.Scenes.ChangeScene(GameOverSceneID)
-			return core.ErrQuitGame
-		}
+	case 'q', 'Q':
+		s.Scenes.ChangeScene(GameOverSceneID)
+		return core.ErrQuitGame
 	}
 
 	return nil
@@ -174,8 +171,6 @@ func (s *PlayingScene) Update(dt float64) {
 }
 
 func (s *PlayingScene) Draw(renderer *render.Renderer) {
-	width, _ := s.Renderer.Size()
-
 	// Draw player
 	player := s.Player
 	playerChar, playerColor := s.getHealthInfo(player.Health, s.Player.MaxHealth)
@@ -261,13 +256,22 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 	}
 
 	// Draw score, level, lives...
-	_ = s.Renderer.DrawText(fmt.Sprintf("Score: %d", s.Score), 1, 1, render.ColorWhite)
-	_ = s.Renderer.DrawText(fmt.Sprintf("Level: %d", s.CurrentLevel), 1, 2, render.ColorWhite)
-	_ = s.Renderer.DrawText(fmt.Sprintf("Enemies: %d", len(s.Aliens)), 1, 3, render.ColorWhite)
+	info := []struct {
+		format string
+		args   []interface{}
+		color  render.Color
+	}{
+		{"Score: %d", []interface{}{s.Score}, render.ColorWhite},
+		{"Level: %d", []interface{}{s.CurrentLevel}, render.ColorWhite},
+		{"Enemies: %d", []interface{}{len(s.Aliens)}, render.ColorWhite},
+		{"Health: %.2f", []interface{}{player.Health}, playerColor},
+		{"Attack: %.2f", []interface{}{player.Attack}, render.ColorWhite},
+		{"Lives: %d", []interface{}{player.Lives}, render.ColorWhite},
+	}
 
-	_ = s.Renderer.DrawText(fmt.Sprintf("Health: %.2f", player.Health), width-13, 1, playerColor)
-	_ = s.Renderer.DrawText(fmt.Sprintf("Attack: %.2f", player.Attack), width-12, 2, render.ColorWhite)
-	_ = s.Renderer.DrawText(fmt.Sprintf("Lives: %d", player.Lives), width-8, 3, render.ColorWhite)
+	for i, item := range info {
+		_ = s.Renderer.DrawText(fmt.Sprintf(item.format, item.args...), 1, i+1, item.color)
+	}
 
 }
 
@@ -298,59 +302,52 @@ func (s *PlayingScene) drawObjOverlay(obj *GameObject, color render.Color, opts 
 	}
 
 	if s.Debug {
-		_ = s.Renderer.DrawText(
-			fmt.Sprintf("P:%.fX,%.fY", obj.Position.X, obj.Position.Y),
-			int(obj.Position.X+obj.Width/2)+1,
-			int(obj.Position.Y-obj.Height/2)-1,
-			color,
-		)
-		_ = s.Renderer.DrawText(
-			fmt.Sprintf("A:%.fWx%.fH", obj.Width, obj.Height),
-			int(obj.Position.X+obj.Width/2)+1,
-			int(obj.Position.Y-obj.Height/2),
-			color,
-		)
-		_ = s.Renderer.DrawText(
-			fmt.Sprintf("S:%.fX,%.fY", obj.Speed.X, obj.Speed.Y),
-			int(obj.Position.X+obj.Width/2)+1,
-			int(obj.Position.Y-obj.Height/2)+1,
-			color,
-		)
+		debugInfo := []struct {
+			format string
+			args   []interface{}
+		}{
+			{"P:%.fX,%.fY", []interface{}{obj.Position.X, obj.Position.Y}},
+			{"A:%.fWx%.fH", []interface{}{obj.Width, obj.Height}},
+			{"S:%.fX,%.fY", []interface{}{obj.Speed.X, obj.Speed.Y}},
+		}
+
+		for i, info := range debugInfo {
+			_ = s.Renderer.DrawText(
+				fmt.Sprintf(info.format, info.args...),
+				int(obj.Position.X+obj.Width/2)+1,
+				int(obj.Position.Y-obj.Height/2)-1+i,
+				color,
+			)
+		}
 	}
 }
 
 func (s *PlayingScene) HandleInput(input core.InputEvent) error {
-	s.Logger.Info("Key pressed", "key", input.Key, "rune", input.Rune)
-
-	switch input.Key {
+	switch input.Rune {
+	case '1', core.KeyF1:
+		s.Debug = !s.Debug
+	case '2', core.KeyF2:
+		s.Overlay = !s.Overlay
+	case core.KeyEscape, core.KeyTab, 'q', 'Q', 'p', 'P':
+		s.Scenes.ChangeScene(PauseMenuSceneID)
+	case 'w', 'W':
+		s.movePlayer(0, -1)
+	case 'a', 'A':
+		s.movePlayer(-1, 0)
+	case 's', 'S':
+		s.movePlayer(0, 1)
+	case 'd', 'D':
+		s.movePlayer(2, 0)
 	case core.KeySpace:
 		s.shoot(&s.Player.GameObject)
-	case core.KeyLeft:
-		s.movePlayer(-1, 0)
-	case core.KeyRight:
-		s.movePlayer(1, 0)
-	case core.KeyUp:
-		s.movePlayer(0, -1)
-	case core.KeyDown:
-		s.movePlayer(0, 1)
-	case core.KeyEscape, core.KeyTab:
-		s.Scenes.ChangeScene(PauseMenuSceneID)
-	default:
-		switch input.Rune {
-		case 'q', 'Q', 'p', 'P':
-			s.Scenes.ChangeScene(PauseMenuSceneID)
-		case 'w', 'W':
-			s.movePlayer(0, -1)
-		case 'a', 'A':
-			s.movePlayer(-1, 0)
-		case 's', 'S':
-			s.movePlayer(0, 1)
-		case 'd', 'D':
-			s.movePlayer(1, 0)
-		case ' ':
-			s.shoot(&s.Player.GameObject)
-		}
+	case '_':
+		s.CurrentLevel -= s.Config.BaseLevelStep
+		s.startWave()
+	case '+':
+		s.CurrentLevel += s.Config.BaseLevelStep
+		s.startWave()
 	}
+
 	return nil
 }
 
@@ -364,7 +361,7 @@ func (s *PauseMenuScene) Draw(renderer *render.Renderer) {
 		lineSpacing    = 2
 	)
 
-	width, height := s.Renderer.Size()
+	width, height := s.Size()
 	startX := width / 10
 
 	// Draw title
@@ -387,15 +384,12 @@ func (s *PauseMenuScene) Draw(renderer *render.Renderer) {
 }
 
 func (s *PauseMenuScene) HandleInput(input core.InputEvent) error {
-	switch input.Key {
+	switch input.Rune {
 	case core.KeyEscape:
 		s.Scenes.ChangeScene(PlayingSceneID)
-	default:
-		switch input.Rune {
-		case 'q', 'Q':
-			s.Scenes.ChangeScene(GameOverSceneID)
-			return core.ErrQuitGame
-		}
+	case 'q', 'Q':
+		s.Scenes.ChangeScene(GameOverSceneID)
+		return core.ErrQuitGame
 	}
 
 	return nil
@@ -420,7 +414,7 @@ func (s *GameOverScene) Enter() {
 }
 
 func (s *GameOverScene) GetDetails() string {
-	width, height := s.Renderer.Size()
+	width, height := s.Size()
 	return fmt.Sprintf(
 		"%dW*%dH|L%d@%dBL|%.1fBH|%.1fBAH|%.1fBA|(%.2fBD * %.1fBDM)|%dBS",
 		width, height,
@@ -439,7 +433,7 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 		lineSpacing       = 2
 	)
 
-	width, height := s.Renderer.Size()
+	width, height := s.Size()
 	startX := width / 10
 
 	// Draw title and game over message
@@ -469,7 +463,7 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 }
 
 func (s *GameOverScene) HandleInput(input core.InputEvent) error {
-	if input.Key == core.KeyEnter {
+	if input.Rune == core.KeyEnter {
 		s.Scenes.ChangeScene(MainMenuSceneID)
 		return nil
 	}

@@ -18,59 +18,12 @@ const (
 	GameOverSceneID
 )
 
-var BaseConfig = Config{
-	Title:      "Space Invaders",
-	GameDir:    "spaceinvaders",
-	ConfigFile: "config.json",
-	BoardFile:  "board.json",
-
-	PlayerYOffset:  3,
-	BarrierYOffset: 7,
-	AlienYOffset:   3,
-
-	BaseScore:                1,
-	BaseLives:                3,
-	BaseLevel:                1,
-	BaseLevelStep:            1,
-	BaseDifficulty:           1.0,
-	BaseDifficultyMultiplier: 0.1,
-
-	BaseCollectibleDuration:      10.0,
-	BaseCollectableSpawnInterval: 5.0,
-	BaseMaxCollectables:          3,
-	BaseCollectableSpeed:         1,
-
-	BasePlayerSize:   2.0,
-	BasePlayerSpeed:  1.0,
-	BasePlayerHealth: 10.0,
-	BasePlayerAttack: 5.0,
-
-	BaseAliensCount: 1,
-	BaseAlienSize:   2.0,
-	BaseAlienSpeed:  1.0,
-	BaseAlienHealth: 20.0,
-
-	BaseProjectileSize:   2.0,
-	BaseProjectileSpeed:  30.0,
-	BaseProjectileHealth: 10.0,
-
-	BaseBarrierCount:  10,
-	BaseBarrierSize:   2.0,
-	BaseBarrierHealth: 100.0,
-	BaseBarrierAttack: 0.0,
-
-	BaseShootInterval:     15.0,
-	MinShootInterval:      5.0,
-	ShootIntervalVariance: 20.0,
-	BaseShootChance:       0.2,
-	CooldownMultiplier:    1.5,
-	IntervalRandomFactor:  0.5,
-}
-
 // Game represents the Space Invaders game state and logic
 
 type Game struct {
 	// Internal engine stuff
+	Width       int
+	Height      int
 	Renderer    *render.Renderer
 	Logger      *slog.Logger
 	Scenes      *scenes.Manager
@@ -98,10 +51,10 @@ type Game struct {
 // NewGame creates a new instance of the Space Invaders game
 func NewGame(width, height int, workDir string, debug bool, overlay bool) (*Game, error) {
 	logger := utils.Logger
-	renderer := render.NewRenderer(width, height)
+	renderer := render.NewRenderer(width, height, render.DefaultPalette)
 	scenes := scenes.NewManager()
 
-	config, err := NewConfig(workDir, &BaseConfig)
+	config, err := NewConfig(workDir)
 	if err != nil {
 		return nil, err
 	} else {
@@ -117,6 +70,8 @@ func NewGame(width, height int, workDir string, debug bool, overlay bool) (*Game
 	}
 
 	game := &Game{
+		Width:         width,
+		Height:        height,
 		Renderer:      renderer,
 		Logger:        logger,
 		Config:        config,
@@ -171,6 +126,10 @@ func (g *Game) Cleanup() {
 	}
 
 	g.Logger.Info(fmt.Sprintf("%s - Game cleaned up", g.Config.Title))
+}
+
+func (g *Game) Size() (int, int) {
+	return g.Width, g.Height
 }
 
 // Draw renders the game state
