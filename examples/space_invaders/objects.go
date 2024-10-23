@@ -51,6 +51,8 @@ type Projectile struct {
 // Barrier represents a defensive structure
 type Barrier struct {
 	GameObject
+
+	RegenerationRate float64
 }
 
 type CollectableType int

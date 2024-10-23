@@ -28,27 +28,27 @@ type CollectableAttributes struct {
 var collectableTypes = map[CollectableType]CollectableAttributes{
 	PowerUpHealth: {
 		Type:        PowerUpHealth,
-		SpawnChance: 0.3,
+		SpawnChance: 0.25,
 		Duration:    0,
 	},
 	PowerUpRapidFire: {
 		Type:        PowerUpRapidFire,
-		SpawnChance: 0.2,
-		Duration:    10.0,
+		SpawnChance: 0.15,
+		Duration:    4.0,
 	},
 	PowerUpMultiShot: {
 		Type:        PowerUpMultiShot,
-		SpawnChance: 0.25,
-		Duration:    10.0,
+		SpawnChance: 0.20,
+		Duration:    6.0,
 	},
 	PowerUpExtraLife: {
 		Type:        PowerUpExtraLife,
-		SpawnChance: 0.1,
+		SpawnChance: 0.05,
 		Duration:    0,
 	},
 	PowerUpBomb: {
 		Type:        PowerUpBomb,
-		SpawnChance: 0.05,
+		SpawnChance: 0.10,
 		Duration:    0,
 	},
 }
@@ -74,42 +74,42 @@ var alienTypes = map[AlienType]AlienAttributes{
 	BasicAlien: {
 		Type:        BasicAlien,
 		Size:        2,
-		Health:      10,
-		Speed:       2,
+		Health:      20,
+		Speed:       1.5,
 		AttackPower: 1,
-		ShootChance: 0.10,
+		ShootChance: 0.15,
 	},
 	FastAlien: {
 		Type:        FastAlien,
 		Size:        3,
-		Health:      5,
-		Speed:       5,
+		Health:      10,
+		Speed:       4,
 		AttackPower: 1,
-		ShootChance: 0.05,
+		ShootChance: 0.08,
 	},
 	ToughAlien: {
 		Type:        ToughAlien,
 		Size:        4,
-		Health:      50,
-		Speed:       1,
-		AttackPower: 2,
-		ShootChance: 0.005,
+		Health:      80,
+		Speed:       0.8,
+		AttackPower: 0.5,
+		ShootChance: 0.01,
 	},
 	ShooterAlien: {
 		Type:        ShooterAlien,
 		Size:        3,
-		Health:      8,
-		Speed:       7,
-		AttackPower: 1.5,
-		ShootChance: 0.50,
+		Health:      15,
+		Speed:       3,
+		AttackPower: 2,
+		ShootChance: 0.30,
 	},
 	BossAlien: {
 		Type:        BossAlien,
 		Size:        5,
-		Health:      100,
-		Speed:       3,
-		AttackPower: 3,
-		ShootChance: 0.05,
+		Health:      200,
+		Speed:       1.5,
+		AttackPower: 5,
+		ShootChance: 0.08,
 	},
 }
 
@@ -139,7 +139,7 @@ func (s *PlayingScene) shoot(source *GameObject) {
 	attack := source.Attack
 
 	from := "Alien"
-	speed := Vector2D{X: 0, Y: s.Config.BaseProjectileSpeed / 2}
+	speed := Vector2D{X: 0, Y: s.Config.BaseProjectileSpeed * 0.75} // Slightly slower alien projectiles
 	newY := (position.Y + float64(source.Height)/2) + 0.5
 	if isFromPlayer {
 		from = "Player"
@@ -148,7 +148,7 @@ func (s *PlayingScene) shoot(source *GameObject) {
 
 		// Handle power-ups for player shooting
 		if s.ActiveEffects[PowerUpRapidFire] > 0 {
-			speed.Y *= 2 // Double projectile speed for rapid fire
+			speed.Y *= 1.5 // Increase projectile speed byfor rapid fire (reduced from 2x)
 		}
 	}
 
@@ -158,7 +158,7 @@ func (s *PlayingScene) shoot(source *GameObject) {
 			Speed:     speed,
 			Health:    s.Config.BaseProjectileHealth,
 			MaxHealth: s.Config.BaseProjectileHealth,
-			Attack:    attack,
+			Attack:    attack * 0.9, // Slightly reduce projectile damage
 			Width:     s.Config.BaseProjectileSize,
 			Height:    s.Config.BaseProjectileSize,
 		},
@@ -169,11 +169,13 @@ func (s *PlayingScene) shoot(source *GameObject) {
 
 	// Handle multi-shot power-up for player
 	if isFromPlayer && s.ActiveEffects[PowerUpMultiShot] > 0 {
-		// Create two additional projectiles
+		// Create two additional projectiles with reduced damage
 		leftProjectile := *projectile
 		rightProjectile := *projectile
-		leftProjectile.Position.X -= 5
-		rightProjectile.Position.X += 5
+		leftProjectile.Position.X -= 3  // Reduced spread
+		rightProjectile.Position.X += 3 // Reduced spread
+		leftProjectile.Attack *= 0.7    // Reduce side projectile damage
+		rightProjectile.Attack *= 0.7   // Reduce side projectile damage
 		s.Projectiles = append(s.Projectiles, &leftProjectile, &rightProjectile)
 	}
 
@@ -452,7 +454,7 @@ func (s *PlayingScene) updateGameState() {
 			return
 		}
 
-		s.setupLevelPlayer(s.difficulty())
+		s.setupLevelPlayer(false, s.difficulty())
 		return
 	}
 
@@ -460,19 +462,19 @@ func (s *PlayingScene) updateGameState() {
 		s.Logger.Info("Level cleared! Advancing...", "newLevel", s.CurrentLevel+s.Config.BaseLevelStep)
 		s.CurrentLevel += s.Config.BaseLevelStep
 
-		s.startWave()
+		s.startWave(false)
 		return
 	}
 }
 
 // startWave configures the game state for the current level
-func (s *PlayingScene) startWave() {
+func (s *PlayingScene) startWave(debug bool) {
 	// Reset game entities
 	s.Aliens = nil
 	s.Projectiles = nil
 
 	difficultyMultiplier := s.difficulty()
-	s.setupLevelPlayer(difficultyMultiplier)
+	s.setupLevelPlayer(debug, difficultyMultiplier)
 	s.setupLevelAliens(difficultyMultiplier)
 	s.setupLevelBarriers(difficultyMultiplier)
 
@@ -490,15 +492,32 @@ func (s *PlayingScene) increaseScore(delta int) int {
 }
 
 func (s *PlayingScene) difficulty() float64 {
-	return s.Config.BaseDifficulty + float64(s.CurrentLevel)*s.Config.BaseDifficultyMultiplier
+	baseDifficulty := s.Config.BaseDifficulty
+	levelFactor := math.Log1p(float64(s.CurrentLevel))
+	difficultyIncrease := levelFactor * s.Config.BaseDifficultyMultiplier
+
+	maxDifficulty := s.Config.BaseDifficulty * 5 // Cap at 5x the base difficulty
+
+	return math.Min(baseDifficulty+difficultyIncrease, maxDifficulty)
 }
 
-func (s *PlayingScene) setupLevelPlayer(difficultyMultiplier float64) {
+func (s *PlayingScene) setupLevelPlayer(debug bool, difficultyMultiplier float64) {
 	width, height := s.Size()
-
 	s.Player.Position = Vector2D{X: float64(width) / 2, Y: float64(height - s.Config.PlayerYOffset)}
-	s.Player.Health += s.Config.BasePlayerHealth * max(1.1, difficultyMultiplier*0.80)
-	s.Player.Attack += (s.Config.BasePlayerAttack * max(1.1, difficultyMultiplier*0.80))
+
+	if !debug {
+		return
+	}
+
+	// Linear increase for health with a cap
+	healthIncrease := s.Config.BasePlayerHealth * 0.05 * difficultyMultiplier
+	maxHealthIncrease := s.Config.BasePlayerHealth * 0.5 // Cap at 50% increase
+	s.Player.Health += math.Min(healthIncrease, maxHealthIncrease)
+
+	// Logarithmic increase for attack, with a lower cap
+	attackIncrease := s.Config.BasePlayerAttack * math.Log1p(difficultyMultiplier*0.5)
+	maxAttackIncrease := s.Config.BasePlayerAttack * 0.75 // Cap at 75% increase
+	s.Player.Attack += math.Min(attackIncrease, maxAttackIncrease)
 }
 
 func (s *PlayingScene) setupLevelAliens(difficultyMultiplier float64) {
@@ -662,14 +681,16 @@ func (s *PlayingScene) chooseCollectableType() CollectableType {
 }
 
 func (s *PlayingScene) setupLevelBarriers(difficultyMultiplier float64) {
-
 	if len(s.Barriers) <= 0 {
 		width, height := s.Size()
 		s.BarriersCountLast += 1
 
-		barrierCount := max(s.Config.BaseBarrierCount-int(difficultyMultiplier), 1)
+		barrierCount := max(s.Config.BaseBarrierCount-int(difficultyMultiplier/2), s.Config.BaseBarrierMinimum) // Ensure at least 2 barriers
 		for i := 0; i < barrierCount; i++ {
-			health := s.Config.BaseBarrierHealth
+			// Logarithmic increase in health based on difficulty
+			health := s.Config.BaseBarrierHealth * (1 + 0.1*math.Log1p(difficultyMultiplier))
+			maxHealth := health * s.Config.BaseBarrierMaxRegenerationRate // Allow for some regeneration
+
 			barrier := &Barrier{
 				GameObject: GameObject{
 					Position: Vector2D{
@@ -678,14 +699,20 @@ func (s *PlayingScene) setupLevelBarriers(difficultyMultiplier float64) {
 					},
 					Speed:     Vector2D{},
 					Health:    health,
-					MaxHealth: health,
-					Attack:    s.Config.BaseBarrierAttack,
+					MaxHealth: maxHealth,
+					Attack:    s.Config.BaseBarrierAttack * math.Sqrt(difficultyMultiplier), // Slight increase in attack power, if set
 					Width:     s.Config.BaseBarrierSize * 2,
 					Height:    s.Config.BaseBarrierSize,
 				},
+				RegenerationRate: 0.01 * difficultyMultiplier, // Slow health regeneration
 			}
 
 			s.Barriers = append(s.Barriers, barrier)
+		}
+	} else {
+		// Regenerate barrier health over time
+		for _, barrier := range s.Barriers {
+			barrier.Health = math.Min(barrier.Health+barrier.RegenerationRate, barrier.MaxHealth)
 		}
 	}
 }
