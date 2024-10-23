@@ -342,12 +342,10 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 		s.shoot(&s.Player.GameObject)
 	case '_':
 		s.CurrentLevel -= s.Config.BaseLevelStep
-		s.startWave(true)
-
+		s.startWave()
 	case '+':
 		s.CurrentLevel += s.Config.BaseLevelStep
-		s.startWave(true)
-
+		s.startWave()
 	}
 
 	return nil

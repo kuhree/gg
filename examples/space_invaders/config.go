@@ -42,12 +42,12 @@ type Config struct {
 	BaseProjectileSpeed  float64
 	BaseProjectileHealth float64
 
-	BaseBarrierSize                float64
-	BaseBarrierCount               int
-	BaseBarrierMinimum             int
-	BaseBarrierHealth              float64
-	BaseBarrierAttack              float64
-	BaseBarrierMaxRegenerationRate float64
+	BaseBarrierSize             float64
+	BaseBarrierCount            int
+	BaseBarrierMinimum          int
+	BaseBarrierHealth           float64
+	BaseBarrierAttack           float64
+	BaseBarrierRegenerationRate float64
 
 	BaseShootInterval     float64
 	MinShootInterval      float64
@@ -90,12 +90,12 @@ func NewConfig(workDir string) (*Config, error) {
 		BaseProjectileSpeed:  30.0,
 		BaseProjectileHealth: 10.0,
 
-		BaseBarrierCount:               10,
-		BaseBarrierSize:                2.0,
-		BaseBarrierHealth:              100.0,
-		BaseBarrierAttack:              0.0,
-		BaseBarrierMaxRegenerationRate: 1.5,
-		BaseBarrierMinimum:             2,
+		BaseBarrierCount:            10,
+		BaseBarrierSize:             2.0,
+		BaseBarrierHealth:           100.0,
+		BaseBarrierAttack:           0.0,
+		BaseBarrierRegenerationRate: 2,
+		BaseBarrierMinimum:          2,
 
 		BaseShootInterval:     15.0,
 		MinShootInterval:      5.0,
