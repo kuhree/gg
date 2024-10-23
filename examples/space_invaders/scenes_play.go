@@ -287,7 +287,6 @@ func (s *PlayingScene) updateProjectiles(dt float64) {
 // updateCollisions detects and handles collisions between game objects
 // collisions are something else
 func (s *PlayingScene) updateCollisions() {
-
 	player := s.Player
 
 	// player/collectable
@@ -303,11 +302,8 @@ func (s *PlayingScene) updateCollisions() {
 		alien := s.Aliens[i]
 
 		// check alien/player collisions
-		if alien.Health >= 0 && s.collides(&player.GameObject, &alien.GameObject) {
-			if alien.Health >= 0 {
-				s.Player.Health -= alien.Health
-			}
-
+		if alien.Health > 0 && s.collides(&player.GameObject, &alien.GameObject) {
+			s.Player.Health -= alien.Health
 			s.Aliens[i].Health = 0 // kill it, don't wanna "bump" into it 1n times and die
 		}
 
@@ -326,7 +322,7 @@ func (s *PlayingScene) updateCollisions() {
 		isFromPlayer := projectile.Source == &player.GameObject
 
 		// projectile/player
-		if !isFromPlayer && projectile.Health >= 0 && s.collides(&projectile.GameObject, &player.GameObject) {
+		if !isFromPlayer && projectile.Health > 0 && s.collides(&projectile.GameObject, &player.GameObject) {
 			s.Player.Health -= projectile.Health
 			s.Projectiles[i].Health = 0 // kill it w fire NOW
 		}
@@ -334,12 +330,12 @@ func (s *PlayingScene) updateCollisions() {
 		// projectile/alien
 		for j := len(s.Aliens) - 1; j >= 0; j-- {
 			alien := s.Aliens[j]
-			if isFromPlayer && alien.Health >= 0 && s.collides(&projectile.GameObject, &alien.GameObject) {
-				ref := s.Aliens[j].Health - projectile.Health
-				s.Projectiles[i].Health -= s.Aliens[j].Health
-				s.Aliens[j].Health = ref
+			if isFromPlayer && alien.Health > 0 && s.collides(&projectile.GameObject, &alien.GameObject) {
+				damage := math.Min(projectile.Health, alien.Health)
+				s.Aliens[j].Health -= damage
+				s.Projectiles[i].Health -= damage
 
-				if alien.Health <= 0 {
+				if s.Aliens[j].Health <= 0 {
 					s.increaseScore(int(alien.MaxHealth))
 				}
 			}
@@ -348,21 +344,22 @@ func (s *PlayingScene) updateCollisions() {
 		// projectile/barrier
 		for j := len(s.Barriers) - 1; j >= 0; j-- {
 			barrier := s.Barriers[j]
-			if !isFromPlayer && barrier.Health >= 0 && s.collides(&projectile.GameObject, &barrier.GameObject) {
-				s.Barriers[j].Health -= projectile.Health
-				s.Projectiles[i].Health = 0 // kill it, issa barrier
+			if barrier.Health > 0 && s.collides(&projectile.GameObject, &barrier.GameObject) {
+				damage := math.Min(projectile.Health, barrier.Health)
+				s.Barriers[j].Health -= damage
+				s.Projectiles[i].Health -= damage
 			}
 		}
 
 		// projectile/projectile
-		for j := len(s.Projectiles) - 1; j >= 0; j-- {
+		for j := i + 1; j < len(s.Projectiles); j++ {
 			proj := s.Projectiles[j]
-			isFromPlayerInner := &player.GameObject == proj.Source
+			isFromPlayerInner := proj.Source == &player.GameObject
 
-			if isFromPlayer && !isFromPlayerInner && proj.Health >= 0 && s.collides(&projectile.GameObject, &proj.GameObject) {
-				ref := s.Projectiles[j].Health - projectile.Health
-				s.Projectiles[i].Health -= proj.Health
-				s.Projectiles[j].Health = ref
+			if isFromPlayer != isFromPlayerInner && proj.Health > 0 && s.collides(&projectile.GameObject, &proj.GameObject) {
+				damage := math.Min(projectile.Health, proj.Health)
+				s.Projectiles[i].Health -= damage
+				s.Projectiles[j].Health -= damage
 			}
 		}
 	}
