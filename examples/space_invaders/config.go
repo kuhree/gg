@@ -67,10 +67,10 @@ func NewConfig(workDir string) (*Config, error) {
 		BaseLevel:                1,
 		BaseLevelStep:            1,
 		BaseDifficulty:           1.0,
-		BaseDifficultyMultiplier: 0.1,
+		BaseDifficultyMultiplier: 0.2,
 
 		BaseCollectibleDuration:      10.0,
-		BaseCollectableSpawnInterval: 5.0,
+		BaseCollectableSpawnInterval: 10.0,
 		BaseMaxCollectables:          3,
 		BaseCollectableSpeed:         1,
 
@@ -83,20 +83,20 @@ func NewConfig(workDir string) (*Config, error) {
 		BaseAlienSpeed:  1.0,
 		BaseAlienHealth: 20.0,
 
-		BaseProjectileSize:   2.0,
+		BaseProjectileSize:   1.0,
 		BaseProjectileSpeed:  30.0,
-		BaseProjectileHealth: 10.0,
+		BaseProjectileHealth: 1.0,
 
-		BaseBarrierCount:            10,
-		BaseBarrierSize:             2.0,
-		BaseBarrierHealth:           100.0,
+		BaseBarrierCount:            7,
+		BaseBarrierSize:             3.0,
+		BaseBarrierHealth:           50.0,
 		BaseBarrierRegenerationRate: 2,
 		BaseBarrierMinimum:          2,
 
-		BaseShootInterval:     15.0,
-		MinShootInterval:      5.0,
+		BaseShootInterval:     8.0,
+		MinShootInterval:      3.0,
 		ShootIntervalVariance: 20.0,
-		BaseShootChance:       0.2,
+		BaseShootChance:       0.4,
 		CooldownMultiplier:    1.5,
 		IntervalRandomFactor:  0.5,
 	}
