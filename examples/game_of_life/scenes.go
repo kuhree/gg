@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strings"
 
 	"github.com/kuhree/gg/internal/engine/core"
 	"github.com/kuhree/gg/internal/engine/leaderboard"
 	"github.com/kuhree/gg/internal/engine/render"
-	"github.com/kuhree/gg/internal/utils"
 )
 
 const (
@@ -71,6 +71,11 @@ type PauseMenuScene struct {
 	BaseScene
 }
 
+type NameEntryScene struct {
+	BaseScene
+	Name string
+}
+
 // GameOverScene represents the game over screen
 type GameOverScene struct {
 	BaseScene
@@ -124,6 +129,17 @@ func NewPauseMenuScene(game *Game) *PauseMenuScene {
 		BaseScene: BaseScene{
 			Game:          game,
 			sceneName:     "Pause Menu",
+			blinkInterval: 0.5,
+			showOnBlink:   true,
+		},
+	}
+}
+
+func NewNameEntryScene(game *Game) *NameEntryScene {
+	return &NameEntryScene{
+		BaseScene: BaseScene{
+			Game:          game,
+			sceneName:     "Enter Name",
 			blinkInterval: 0.5,
 			showOnBlink:   true,
 		},
@@ -257,24 +273,6 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 
 // PlayingScene helpers
 
-// movePlayer updates the player's position based on the given direction
-func (s *PlayingScene) movePlayer(dx, dy int, speed float64) {
-	s.Logger.Debug("movePlayer called", "dx", dx, "dy", dy, "currentPos", s.playerPos, "speed", speed)
-
-	width, height := s.Size()
-	newX := s.playerPos.X + float64(dx)*speed
-	newY := s.playerPos.Y + float64(dy)*speed
-
-	// Limit player movement within renderer boundaries
-	halfWidth, halfHeight := float64(width)/2, float64(height)/2
-	newX = utils.Clamp(newX, halfWidth, float64(width)-halfWidth)
-	newY = utils.Clamp(newY, halfHeight, float64(height)-halfHeight)
-
-	s.playerPos.X = newX
-	s.playerPos.Y = newY
-
-	s.Logger.Debug("Player moved", "newX", newX, "newY", newY, "dx", dx, "dy", dy, "pos", s.playerPos)
-}
 
 func (s *PlayingScene) getOrCreateCell(x, y int) *Cell {
 	pos := Vector2D{X: float64(x), Y: float64(y)}
@@ -292,25 +290,6 @@ func (s *PlayingScene) getOrCreateCell(x, y int) *Cell {
 	}
 	s.cells[pos] = newCell
 	return &newCell
-}
-
-// setCell sets the state of a cell at the given coordinates
-func (s *PlayingScene) setCell(row, col int, alive bool) {
-	pos := Vector2D{X: float64(col), Y: float64(row)}
-	if cell, exists := s.cells[pos]; exists {
-		cell.Alive = alive
-		s.cells[pos] = cell
-	} else {
-		newCell := Cell{
-			GameObject: GameObject{
-				Position: pos,
-				Width:    float64(s.Config.BaseSize),
-				Height:   float64(s.Config.BaseSize),
-			},
-			Alive: alive,
-		}
-		s.cells[pos] = newCell
-	}
 }
 
 // updateCollisions detects and handles collisions between game objects
@@ -641,4 +620,56 @@ func (s *GameOverScene) HandleInput(input core.InputEvent) error {
 		return core.ErrQuitGame
 	}
 	return nil
+}
+
+func (s *NameEntryScene) Update(dt float64, input core.InputEvent) error {
+	if input.Rune != 0 && input.Rune != core.KeyBackspace {
+		s.Name += string(input.Rune)
+	} else if input.Rune == core.KeyBackspace {
+		s.Name = strings.TrimRight(s.Name, " ")
+	} else if input.Rune == core.KeyEnter && s.Name != "" {
+		s.SaveScoreToLeaderboard(s.Name)
+		s.Scenes.ChangeScene(MainMenuSceneID)
+	}
+
+	return nil
+}
+
+func (s *NameEntryScene) Draw(renderer *render.Renderer) {
+	width, height := s.Size()
+	startX := width / 10
+	controlsY := int(float64(height) * (titleOffset + 3.5))
+	lineSpacing := 20
+
+	// Draw game over message
+	_ = renderer.DrawText("Game Over", startX, int(float64(height)*titleOffset), render.ColorRed)
+
+	// Draw score
+	_ = renderer.DrawText(fmt.Sprintf("Score: %d", s.Score), startX, controlsY, render.ColorBlue)
+	_ = renderer.DrawText("Press Q to quit the game", startX, controlsY+lineSpacing, render.ColorWhite)
+	_ = renderer.DrawText("Enter your name:", startX, controlsY+2*lineSpacing, render.ColorWhite)
+	_ = renderer.DrawText(s.Name, startX+100, controlsY+2*lineSpacing, render.ColorWhite)
+}
+
+func (s *NameEntryScene) HandleInput(input core.InputEvent) error {
+	if input.Rune != 0 && input.Rune != core.KeyBackspace {
+		s.Name += string(input.Rune)
+	} else if input.Rune == core.KeyBackspace {
+		s.Name = strings.TrimRight(s.Name, " ")
+	} else if input.Rune == core.KeyEnter && s.Name != "" {
+		// Save the name and score to the leaderboard
+		s.SaveScoreToLeaderboard(s.Name)
+		s.Scenes.ChangeScene(MainMenuSceneID)
+	}
+
+	switch input.Rune {
+	case 'q', 'Q':
+		return core.ErrQuitGame
+	}
+	return nil
+}
+
+func (s *NameEntryScene) SaveScoreToLeaderboard(name string) {
+	// Logic to save the score and name to the leaderboard
+	fmt.Printf("Saving score for %s\n", name)
 }
