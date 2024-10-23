@@ -277,7 +277,6 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 
 // PlayingScene helpers
 
-
 func (s *PlayingScene) getOrCreateCell(x, y int) *Cell {
 	pos := Vector2D{X: float64(x), Y: float64(y)}
 	if cell, exists := s.cells[pos]; exists {
@@ -582,9 +581,21 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 
 	// Draw title and game over message
 	_ = renderer.DrawText(fmt.Sprintf("%s - %s", s.Config.Title, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
+
+	if !s.nameEntered {
+		// Draw name entry prompt
+		_ = renderer.DrawText("Enter your name:", startX, int(float64(height)*scoreOffset), render.ColorWhite)
+		if s.showOnBlink {
+			_ = renderer.DrawText(s.name+"_", startX, int(float64(height)*scoreOffset)+2, render.ColorBrightMagenta)
+		} else {
+			_ = renderer.DrawText(s.name, startX, int(float64(height)*scoreOffset)+2, render.ColorBrightMagenta)
+		}
+		return
+	}
+
 	if s.showOnBlink {
 		_ = renderer.DrawText(
-			fmt.Sprintf("%d | %s > %s", s.Score, "anon", s.GetDetails()),
+			fmt.Sprintf("%d | %s > %s", s.Score, s.name, s.GetDetails()),
 			startX,
 			int(float64(height)*scoreOffset),
 			render.ColorMagenta,
@@ -619,8 +630,6 @@ func (s *GameOverScene) HandleInput(input core.InputEvent) error {
 				s.Logger.Info("Adding leaderboard entry...", "name", s.name, "score", s.Score)
 				s.Leaderboard.Add(s.name, s.Score, s.GetDetails())
 			}
-		case 'q', 'Q':
-			return core.ErrQuitGame
 		default:
 			// Only allow printable characters
 			if input.Rune >= 32 && input.Rune <= 126 && len(s.name) < 20 {
