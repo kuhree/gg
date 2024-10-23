@@ -223,9 +223,11 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 	// Draw score, level, lives...
 	_ = renderer.DrawText(fmt.Sprintf("Alive: %d", s.Score), 1, 1, render.ColorWhite)
 	_ = renderer.DrawText(fmt.Sprintf("Level: %d", s.CurrentLevel), 1, 2, render.ColorWhite)
-	_ = renderer.DrawText(fmt.Sprintf("Position: (%.1f, %.1f)", s.playerPos.X, s.playerPos.Y), 1, 3, render.ColorWhite)
-	_ = renderer.DrawText(fmt.Sprintf("Stable Generations: %d / %d", s.stableGenerations, s.Config.StabilityThreshold), 1, 4, render.ColorWhite)
-	_ = renderer.DrawText(fmt.Sprintf("Stable Oscillations: %d / %d", s.stableOscillations, s.Config.StabilityThreshold/2), 1, 5, render.ColorWhite)
+	if s.Overlay || s.Debug {
+		_ = renderer.DrawText(fmt.Sprintf("Position: (%.1f, %.1f)", s.playerPos.X, s.playerPos.Y), 1, 3, render.ColorWhite)
+		_ = renderer.DrawText(fmt.Sprintf("Stable Generations: %d / %d", s.stableGenerations, s.Config.StabilityThreshold), 1, 4, render.ColorWhite)
+		_ = renderer.DrawText(fmt.Sprintf("Stable Oscillations: %d / %d", s.stableOscillations, s.Config.StabilityThreshold/2), 1, 5, render.ColorWhite)
+	}
 }
 
 func (s *PlayingScene) HandleInput(input core.InputEvent) error {
