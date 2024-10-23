@@ -454,7 +454,7 @@ func (s *PlayingScene) updateGameState() {
 			return
 		}
 
-		s.setupLevelPlayer(false, s.difficulty())
+		s.setupLevelPlayer(s.difficulty())
 		return
 	}
 
@@ -462,20 +462,20 @@ func (s *PlayingScene) updateGameState() {
 		s.Logger.Info("Level cleared! Advancing...", "newLevel", s.CurrentLevel+s.Config.BaseLevelStep)
 		s.CurrentLevel += s.Config.BaseLevelStep
 
-		s.startWave(false)
+		s.startWave()
 		return
 	}
 }
 
 // startWave configures the game state for the current level
-func (s *PlayingScene) startWave(debug bool) {
+func (s *PlayingScene) startWave() {
 	// Reset game entities
 	s.Aliens = nil
 	s.Projectiles = nil
 
 	difficultyMultiplier := s.difficulty()
-	s.setupLevelPlayer(debug, difficultyMultiplier)
 	s.setupLevelAliens(difficultyMultiplier)
+	s.setupLevelPlayer(difficultyMultiplier)
 	s.setupLevelBarriers(difficultyMultiplier)
 
 	s.Logger.Info("Level setup complete",
@@ -501,13 +501,9 @@ func (s *PlayingScene) difficulty() float64 {
 	return math.Min(baseDifficulty+difficultyIncrease, maxDifficulty)
 }
 
-func (s *PlayingScene) setupLevelPlayer(debug bool, difficultyMultiplier float64) {
+func (s *PlayingScene) setupLevelPlayer(difficultyMultiplier float64) {
 	width, height := s.Size()
 	s.Player.Position = Vector2D{X: float64(width) / 2, Y: float64(height - s.Config.PlayerYOffset)}
-
-	if !debug {
-		return
-	}
 
 	// Linear increase for health with a cap
 	healthIncrease := s.Config.BasePlayerHealth * 0.05 * difficultyMultiplier
@@ -516,7 +512,7 @@ func (s *PlayingScene) setupLevelPlayer(debug bool, difficultyMultiplier float64
 
 	// Logarithmic increase for attack, with a lower cap
 	attackIncrease := s.Config.BasePlayerAttack * math.Log1p(difficultyMultiplier*0.5)
-	maxAttackIncrease := s.Config.BasePlayerAttack * 0.75 // Cap at 75% increase
+	maxAttackIncrease := s.Config.BasePlayerAttack * 0.5 // Cap at 50% increase
 	s.Player.Attack += math.Min(attackIncrease, maxAttackIncrease)
 }
 
@@ -689,7 +685,6 @@ func (s *PlayingScene) setupLevelBarriers(difficultyMultiplier float64) {
 		for i := 0; i < barrierCount; i++ {
 			// Logarithmic increase in health based on difficulty
 			health := s.Config.BaseBarrierHealth * (1 + 0.1*math.Log1p(difficultyMultiplier))
-			maxHealth := health * s.Config.BaseBarrierMaxRegenerationRate // Allow for some regeneration
 
 			barrier := &Barrier{
 				GameObject: GameObject{
@@ -699,12 +694,12 @@ func (s *PlayingScene) setupLevelBarriers(difficultyMultiplier float64) {
 					},
 					Speed:     Vector2D{},
 					Health:    health,
-					MaxHealth: maxHealth,
+					MaxHealth: health,
 					Attack:    s.Config.BaseBarrierAttack * math.Sqrt(difficultyMultiplier), // Slight increase in attack power, if set
 					Width:     s.Config.BaseBarrierSize * 2,
 					Height:    s.Config.BaseBarrierSize,
 				},
-				RegenerationRate: 0.01 * difficultyMultiplier, // Slow health regeneration
+				RegenerationRate: s.Config.BaseBarrierRegenerationRate * difficultyMultiplier,
 			}
 
 			s.Barriers = append(s.Barriers, barrier)
@@ -712,6 +707,7 @@ func (s *PlayingScene) setupLevelBarriers(difficultyMultiplier float64) {
 	} else {
 		// Regenerate barrier health over time
 		for _, barrier := range s.Barriers {
+			s.Logger.Debug("BARRIERRRSS", "health", barrier.Health, "maxHealth", barrier.MaxHealth)
 			barrier.Health = math.Min(barrier.Health+barrier.RegenerationRate, barrier.MaxHealth)
 		}
 	}
@@ -784,10 +780,12 @@ func (s *PlayingScene) getAlienInfo(alien *Alien) (rune, render.Color) {
 func (s *PlayingScene) getBarrierInfo(health float64, maxHealth float64) (rune, render.Color) {
 	ratio := health / float64(maxHealth)
 	switch {
-	case ratio < 1.0:
-		return s.getHealthInfo(health, maxHealth)
-	default:
+	case ratio > 1.0:
 		return render.FullBlock, render.ColorGreen
+	case ratio >= 0.90:
+		return render.FullBlock, render.ColorGreen
+	default:
+		return s.getHealthInfo(health, maxHealth)
 	}
 }
 
