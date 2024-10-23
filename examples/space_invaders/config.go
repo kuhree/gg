@@ -31,7 +31,6 @@ type Config struct {
 	BasePlayerSize   float64
 	BasePlayerSpeed  float64
 	BasePlayerHealth float64
-	BasePlayerAttack float64
 
 	BaseAliensCount int
 	BaseAlienSize   float64
@@ -46,7 +45,6 @@ type Config struct {
 	BaseBarrierCount            int
 	BaseBarrierMinimum          int
 	BaseBarrierHealth           float64
-	BaseBarrierAttack           float64
 	BaseBarrierRegenerationRate float64
 
 	BaseShootInterval     float64
@@ -79,7 +77,6 @@ func NewConfig(workDir string) (*Config, error) {
 		BasePlayerSize:   2.0,
 		BasePlayerSpeed:  1.0,
 		BasePlayerHealth: 10.0,
-		BasePlayerAttack: 5.0,
 
 		BaseAliensCount: 1,
 		BaseAlienSize:   2.0,
@@ -93,7 +90,6 @@ func NewConfig(workDir string) (*Config, error) {
 		BaseBarrierCount:            10,
 		BaseBarrierSize:             2.0,
 		BaseBarrierHealth:           100.0,
-		BaseBarrierAttack:           0.0,
 		BaseBarrierRegenerationRate: 2,
 		BaseBarrierMinimum:          2,
 
