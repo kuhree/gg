@@ -344,7 +344,7 @@ func (s *PlayingScene) updateCollisions() {
 		// projectile/barrier
 		for j := len(s.Barriers) - 1; j >= 0; j-- {
 			barrier := s.Barriers[j]
-			if barrier.Health > 0 && s.collides(&projectile.GameObject, &barrier.GameObject) {
+			if !isFromPlayer && barrier.Health > 0 && s.collides(&projectile.GameObject, &barrier.GameObject) {
 				damage := math.Min(projectile.Health, barrier.Health)
 				s.Barriers[j].Health -= damage
 				s.Projectiles[i].Health -= damage
