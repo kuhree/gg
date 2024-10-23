@@ -86,7 +86,6 @@ func NewGame(width, height int, workDir string, debug bool, overlay bool) (*Game
 				Position: Vector2D{X: float64(width) / 2, Y: float64(height) - float64(config.PlayerYOffset)},
 				Speed:    Vector2D{X: config.BasePlayerSpeed, Y: config.BasePlayerSpeed},
 				Health:   config.BasePlayerHealth,
-				Attack:   config.BasePlayerAttack,
 				Width:    config.BasePlayerSize,
 				Height:   config.BasePlayerSize,
 			},

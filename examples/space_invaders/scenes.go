@@ -265,7 +265,6 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 		{"Level: %d", []interface{}{s.CurrentLevel}, render.ColorWhite},
 		{"Enemies: %d", []interface{}{len(s.Aliens)}, render.ColorWhite},
 		{"Health: %.2f", []interface{}{player.Health}, playerColor},
-		{"Attack: %.2f", []interface{}{player.Attack}, render.ColorWhite},
 		{"Lives: %d", []interface{}{player.Lives}, render.ColorWhite},
 	}
 
@@ -277,7 +276,6 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 
 type OverlayOpts struct {
 	Health bool
-	Attack bool
 }
 
 func (s *PlayingScene) drawObjOverlay(obj *GameObject, color render.Color, opts OverlayOpts) {
@@ -289,15 +287,6 @@ func (s *PlayingScene) drawObjOverlay(obj *GameObject, color render.Color, opts 
 			int(obj.Position.X-obj.Width/2),
 			int(obj.Position.Y+obj.Height/2)-1,
 			healthColor,
-		)
-	}
-
-	if s.Overlay || opts.Attack {
-		_ = s.Renderer.DrawText(
-			fmt.Sprintf("%.f", math.Round(obj.Attack)),
-			int(obj.Position.X-obj.Width/2),
-			int(obj.Position.Y-obj.Height/2),
-			render.ColorRed,
 		)
 	}
 
@@ -416,11 +405,11 @@ func (s *GameOverScene) Enter() {
 func (s *GameOverScene) GetDetails() string {
 	width, height := s.Size()
 	return fmt.Sprintf(
-		"%dW*%dH|L%d@%dBL|%.1fBH|%.1fBAH|%.1fBA|(%.2fBD * %.1fBDM)|%dBS",
+		"%dW*%dH|L%d@%dBL|%.1fBH|%.1fBAH|(%.2fBD * %.1fBDM)|%dBS",
 		width, height,
 		s.CurrentLevel, s.Config.BaseLevel,
 		s.Config.BasePlayerHealth, s.Config.BaseAlienHealth,
-		s.Config.BasePlayerAttack, s.Config.BaseDifficulty, s.Config.BaseDifficultyMultiplier, s.Config.BaseScore,
+		s.Config.BaseDifficulty, s.Config.BaseDifficultyMultiplier, s.Config.BaseScore,
 	)
 }
 

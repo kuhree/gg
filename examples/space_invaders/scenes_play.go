@@ -16,7 +16,7 @@ const (
 	PowerUpRapidFire
 	PowerUpMultiShot
 	PowerUpExtraLife
-	PowerUpBomb
+	PowerUpNuke
 )
 
 type CollectableAttributes struct {
@@ -46,8 +46,8 @@ var collectableTypes = map[CollectableType]CollectableAttributes{
 		SpawnChance: 0.05,
 		Duration:    0,
 	},
-	PowerUpBomb: {
-		Type:        PowerUpBomb,
+	PowerUpNuke: {
+		Type:        PowerUpNuke,
 		SpawnChance: 0.10,
 		Duration:    0,
 	},
@@ -66,7 +66,7 @@ type AlienAttributes struct {
 	Size        int
 	Health      float64
 	Speed       float64
-	AttackPower float64
+	Power       float64
 	ShootChance float64
 }
 
@@ -76,31 +76,31 @@ var alienTypes = map[AlienType]AlienAttributes{
 		Size:        2,
 		Health:      20,
 		Speed:       1.5,
-		AttackPower: 1,
+		Power:       1,
 		ShootChance: 0.15,
 	},
 	FastAlien: {
 		Type:        FastAlien,
 		Size:        3,
-		Health:      10,
+		Health:      15,
 		Speed:       4,
-		AttackPower: 1,
+		Power:       1,
 		ShootChance: 0.08,
 	},
 	ToughAlien: {
 		Type:        ToughAlien,
 		Size:        4,
-		Health:      80,
+		Health:      100,
 		Speed:       0.8,
-		AttackPower: 0.5,
+		Power:       0.5,
 		ShootChance: 0.01,
 	},
 	ShooterAlien: {
 		Type:        ShooterAlien,
 		Size:        3,
-		Health:      15,
+		Health:      17.5,
 		Speed:       3,
-		AttackPower: 2,
+		Power:       2,
 		ShootChance: 0.30,
 	},
 	BossAlien: {
@@ -108,7 +108,7 @@ var alienTypes = map[AlienType]AlienAttributes{
 		Size:        5,
 		Health:      200,
 		Speed:       1.5,
-		AttackPower: 5,
+		Power:       5,
 		ShootChance: 0.08,
 	},
 }
@@ -136,7 +136,6 @@ func (s *PlayingScene) movePlayer(dx, dy int) {
 func (s *PlayingScene) shoot(source *GameObject) {
 	isFromPlayer := source == &s.Player.GameObject
 	position := source.Position
-	attack := source.Attack
 
 	from := "Alien"
 	speed := Vector2D{X: 0, Y: s.Config.BaseProjectileSpeed * 0.75} // Slightly slower alien projectiles
@@ -148,7 +147,7 @@ func (s *PlayingScene) shoot(source *GameObject) {
 
 		// Handle power-ups for player shooting
 		if s.ActiveEffects[PowerUpRapidFire] > 0 {
-			speed.Y *= 1.5 // Increase projectile speed byfor rapid fire (reduced from 2x)
+			speed.Y *= 1.5
 		}
 	}
 
@@ -156,9 +155,8 @@ func (s *PlayingScene) shoot(source *GameObject) {
 		GameObject: GameObject{
 			Position:  Vector2D{X: position.X, Y: newY},
 			Speed:     speed,
-			Health:    s.Config.BaseProjectileHealth,
-			MaxHealth: s.Config.BaseProjectileHealth,
-			Attack:    attack * 0.9, // Slightly reduce projectile damage
+			Health:    s.Config.BaseProjectileHealth + (source.Health * 0.9),
+			MaxHealth: s.Config.BaseProjectileHealth + (source.Health * 0.9),
 			Width:     s.Config.BaseProjectileSize,
 			Height:    s.Config.BaseProjectileSize,
 		},
@@ -172,10 +170,12 @@ func (s *PlayingScene) shoot(source *GameObject) {
 		// Create two additional projectiles with reduced damage
 		leftProjectile := *projectile
 		rightProjectile := *projectile
-		leftProjectile.Position.X -= 3  // Reduced spread
-		rightProjectile.Position.X += 3 // Reduced spread
-		leftProjectile.Attack *= 0.7    // Reduce side projectile damage
-		rightProjectile.Attack *= 0.7   // Reduce side projectile damage
+		leftProjectile.Position.X -= 3
+		rightProjectile.Position.X += 3
+		leftProjectile.Health *= 0.7
+		leftProjectile.MaxHealth *= 0.7
+		rightProjectile.Health *= 0.7
+		leftProjectile.MaxHealth *= 0.7
 		s.Projectiles = append(s.Projectiles, &leftProjectile, &rightProjectile)
 	}
 
@@ -327,7 +327,7 @@ func (s *PlayingScene) updateCollisions() {
 
 		// projectile/player
 		if !isFromPlayer && projectile.Health >= 0 && s.collides(&projectile.GameObject, &player.GameObject) {
-			s.Player.Health -= projectile.Attack
+			s.Player.Health -= projectile.Health
 			s.Projectiles[i].Health = 0 // kill it w fire NOW
 		}
 
@@ -335,14 +335,12 @@ func (s *PlayingScene) updateCollisions() {
 		for j := len(s.Aliens) - 1; j >= 0; j-- {
 			alien := s.Aliens[j]
 			if isFromPlayer && alien.Health >= 0 && s.collides(&projectile.GameObject, &alien.GameObject) {
-				if alien.Health >= 0 {
-					s.Projectiles[i].Health -= alien.Health
-				}
+				ref := s.Aliens[j].Health - projectile.Health
+				s.Projectiles[i].Health -= s.Aliens[j].Health
+				s.Aliens[j].Health = ref
 
-				score := alien.MaxHealth
-				s.Aliens[j].Health -= projectile.Attack
 				if alien.Health <= 0 {
-					s.increaseScore(int(score))
+					s.increaseScore(int(alien.MaxHealth))
 				}
 			}
 		}
@@ -351,7 +349,7 @@ func (s *PlayingScene) updateCollisions() {
 		for j := len(s.Barriers) - 1; j >= 0; j-- {
 			barrier := s.Barriers[j]
 			if !isFromPlayer && barrier.Health >= 0 && s.collides(&projectile.GameObject, &barrier.GameObject) {
-				s.Barriers[j].Health -= projectile.Attack
+				s.Barriers[j].Health -= projectile.Health
 				s.Projectiles[i].Health = 0 // kill it, issa barrier
 			}
 		}
@@ -362,8 +360,9 @@ func (s *PlayingScene) updateCollisions() {
 			isFromPlayerInner := &player.GameObject == proj.Source
 
 			if isFromPlayer && !isFromPlayerInner && proj.Health >= 0 && s.collides(&projectile.GameObject, &proj.GameObject) {
-				s.Projectiles[j].Health -= projectile.Attack
-				s.Projectiles[i].Health = proj.Attack
+				ref := s.Projectiles[j].Health - projectile.Health
+				s.Projectiles[i].Health -= proj.Health
+				s.Projectiles[j].Health = ref
 			}
 		}
 	}
@@ -400,7 +399,7 @@ func (s *PlayingScene) activateCollectable(c *Collectable) {
 		s.ActiveEffects[PowerUpMultiShot] = c.Duration
 	case PowerUpExtraLife:
 		s.Player.Lives++
-	case PowerUpBomb:
+	case PowerUpNuke:
 		s.destroyAllVisibleAliens()
 	}
 }
@@ -509,11 +508,6 @@ func (s *PlayingScene) setupLevelPlayer(difficultyMultiplier float64) {
 	healthIncrease := s.Config.BasePlayerHealth * 0.05 * difficultyMultiplier
 	maxHealthIncrease := s.Config.BasePlayerHealth * 0.5 // Cap at 50% increase
 	s.Player.Health += math.Min(healthIncrease, maxHealthIncrease)
-
-	// Logarithmic increase for attack, with a lower cap
-	attackIncrease := s.Config.BasePlayerAttack * math.Log1p(difficultyMultiplier*0.5)
-	maxAttackIncrease := s.Config.BasePlayerAttack * 0.5 // Cap at 50% increase
-	s.Player.Attack += math.Min(attackIncrease, maxAttackIncrease)
 }
 
 func (s *PlayingScene) setupLevelAliens(difficultyMultiplier float64) {
@@ -568,7 +562,6 @@ func (s *PlayingScene) generateAliens(count int, difficultyMultiplier float64) [
 				Height:    float64(attributes.Size),
 				Health:    health,
 				MaxHealth: health,
-				Attack:    attributes.AttackPower * difficultyMultiplier,
 			},
 			AlienType:     alienType,
 			shootInterval: adjustedShootInterval,
@@ -695,7 +688,6 @@ func (s *PlayingScene) setupLevelBarriers(difficultyMultiplier float64) {
 					Speed:     Vector2D{},
 					Health:    health,
 					MaxHealth: health,
-					Attack:    s.Config.BaseBarrierAttack * math.Sqrt(difficultyMultiplier), // Slight increase in attack power, if set
 					Width:     s.Config.BaseBarrierSize * 2,
 					Height:    s.Config.BaseBarrierSize,
 				},
@@ -728,7 +720,7 @@ func (s *PlayingScene) getCollectableInfo(col *Collectable) (rune, render.Color)
 	case PowerUpExtraLife:
 		char = 'L'
 		color = render.ColorCyan
-	case PowerUpBomb:
+	case PowerUpNuke:
 		char = 'B'
 		color = render.ColorRed
 	}
@@ -815,29 +807,25 @@ func (s *PlayingScene) getProjectileInfo(proj *Projectile) (rune, render.Color) 
 
 	isFromPlayer := proj.Source == &s.Player.GameObject
 
-	attackRatio := proj.Attack / s.Player.Health
-	if isFromPlayer {
-		attackRatio = proj.Attack / s.Config.BasePlayerAttack
-	}
-
+	powerRatio := proj.Health / s.Player.Health
 	switch {
-	case attackRatio <= 1:
-		char, color = '.', render.ColorWhite // Very weak attack
+	case powerRatio <= 1:
+		char, color = '.', render.ColorWhite // Very weak power
 		if isFromPlayer {
 			char = 's'
 		}
-	case attackRatio <= 1.25:
-		char, color = '|', render.ColorBlue // Weak attack
-	case attackRatio <= 1.75:
-		char, color = '+', render.ColorCyan // Moderate attack
-	case attackRatio < 2.5:
-		char, color = '*', render.ColorGreen // Strong attack
-	case attackRatio < 3:
-		char, color = render.WhiteTriangle, render.ColorRed // Very strong attack
-	case attackRatio < 5:
-		char, color = render.BlackTriangle, render.ColorRed // Extremely powerful attack
+	case powerRatio <= 1.25:
+		char, color = '|', render.ColorBlue // Weak power
+	case powerRatio <= 1.75:
+		char, color = '+', render.ColorCyan // Moderate power
+	case powerRatio < 2.5:
+		char, color = '*', render.ColorGreen // Strong power
+	case powerRatio < 3:
+		char, color = render.WhiteTriangle, render.ColorRed // Very strong power
+	case powerRatio < 5:
+		char, color = render.BlackTriangle, render.ColorRed // Extremely powerful power
 	default:
-		char, color = render.FullBlock, render.ColorRed // Extremely powerful attack
+		char, color = render.FullBlock, render.ColorRed // Extremely powerful power
 	}
 
 	ratio := proj.Health / float64(proj.MaxHealth)

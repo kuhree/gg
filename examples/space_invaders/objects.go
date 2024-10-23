@@ -14,8 +14,6 @@ type GameObject struct {
 
 	Health    float64
 	MaxHealth float64
-	Attack    float64
-	MaxAttack float64
 }
 
 func (o *GameObject) Size() float64 {
