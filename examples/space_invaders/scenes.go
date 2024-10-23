@@ -61,6 +61,8 @@ type PauseMenuScene struct {
 // GameOverScene represents the game over screen
 type GameOverScene struct {
 	BaseScene
+	name        string
+	nameEntered bool
 }
 
 // NewMainMenuScene creates a new main menu scene
@@ -427,9 +429,21 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 
 	// Draw title and game over message
 	_ = renderer.DrawText(fmt.Sprintf("%s - %s", s.Config.Title, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
+
+	if !s.nameEntered {
+		// Draw name entry prompt
+		_ = renderer.DrawText("Enter your name:", startX, int(float64(height)*scoreOffset), render.ColorWhite)
+		if s.showOnBlink {
+			_ = renderer.DrawText(s.name+"_", startX, int(float64(height)*scoreOffset)+2, render.ColorBrightMagenta)
+		} else {
+			_ = renderer.DrawText(s.name, startX, int(float64(height)*scoreOffset)+2, render.ColorBrightMagenta)
+		}
+		return
+	}
+
 	if s.showOnBlink {
 		_ = renderer.DrawText(
-			fmt.Sprintf("%d | %s > %s", s.Score, "anon", s.GetDetails()),
+			fmt.Sprintf("%d | %s > %s", s.Score, s.name, s.GetDetails()),
 			startX,
 			int(float64(height)*scoreOffset),
 			render.ColorMagenta,

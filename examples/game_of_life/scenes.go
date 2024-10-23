@@ -79,6 +79,8 @@ type NameEntryScene struct {
 // GameOverScene represents the game over screen
 type GameOverScene struct {
 	BaseScene
+	name        string
+	nameEntered bool
 }
 
 // NewMainMenuScene creates a new main menu scene
@@ -155,6 +157,8 @@ func NewGameOverScene(game *Game) *GameOverScene {
 			blinkInterval: 0.5,
 			showOnBlink:   true,
 		},
+		name:        "",
+		nameEntered: false,
 	}
 }
 
@@ -554,13 +558,6 @@ func (s *GameOverScene) Enter() {
 		s.Logger.Warn("Failed to load existing leaderboard. Creating a new one...", "path", s.Config.BoardFile, "err", err)
 		s.Leaderboard.Records = make([]leaderboard.Record, 0)
 	}
-
-	s.Logger.Info("Adding leaderboard entry...", "score", s.Score)
-	s.Leaderboard.Add(
-		"anon",
-		s.Score,
-		s.GetDetails(),
-	)
 }
 
 func (s *GameOverScene) GetDetails() string {
@@ -610,12 +607,32 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 }
 
 func (s *GameOverScene) HandleInput(input core.InputEvent) error {
-	if input.Rune == core.KeyEnter {
-		s.Scenes.ChangeScene(MainMenuSceneID)
+	if !s.nameEntered {
+		switch input.Rune {
+		case core.KeyBackspace:
+			if len(s.name) > 0 {
+				s.name = s.name[:len(s.name)-1]
+			}
+		case core.KeyEnter:
+			if len(s.name) > 0 {
+				s.nameEntered = true
+				s.Logger.Info("Adding leaderboard entry...", "name", s.name, "score", s.Score)
+				s.Leaderboard.Add(s.name, s.Score, s.GetDetails())
+			}
+		case 'q', 'Q':
+			return core.ErrQuitGame
+		default:
+			// Only allow printable characters
+			if input.Rune >= 32 && input.Rune <= 126 && len(s.name) < 20 {
+				s.name += string(input.Rune)
+			}
+		}
 		return nil
 	}
 
 	switch input.Rune {
+	case core.KeyEnter:
+		s.Scenes.ChangeScene(MainMenuSceneID)
 	case 'q', 'Q':
 		return core.ErrQuitGame
 	}
