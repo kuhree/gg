@@ -431,10 +431,7 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 		} else {
 			_ = renderer.DrawText(s.name, startX, int(float64(height)*scoreOffset)+2, render.ColorBrightMagenta)
 		}
-		return
-	}
-
-	if s.showOnBlink {
+	} else if s.showOnBlink {
 		_ = renderer.DrawText(
 			fmt.Sprintf("%d | %s > %s", s.Score, s.name, s.GetDetails()),
 			startX,
@@ -455,7 +452,7 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 	controlsY := int(float64(height) * controlsOffset)
 	_ = renderer.DrawText("Controls:", startX, controlsY, render.ColorBlue)
 	_ = renderer.DrawText("Press Q to quit the game", startX, controlsY+lineSpacing, render.ColorWhite)
-	_ = renderer.DrawText("Press ENTER to return to main menu", startX, controlsY+2*lineSpacing, render.ColorWhite)
+	_ = renderer.DrawText("Press ENTER to save/return to main menu", startX, controlsY+2*lineSpacing, render.ColorWhite)
 }
 
 func (s *GameOverScene) HandleInput(input core.InputEvent) error {
@@ -470,6 +467,10 @@ func (s *GameOverScene) HandleInput(input core.InputEvent) error {
 				s.nameEntered = true
 				s.Logger.Info("Adding leaderboard entry...", "name", s.name, "score", s.Score)
 				s.Leaderboard.Add(s.name, s.Score, s.GetDetails())
+				err := s.Leaderboard.Save(s.Config.BoardFile)
+				if err != nil {
+					return err
+				}
 			}
 		default:
 			// Only allow printable characters
