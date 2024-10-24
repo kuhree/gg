@@ -231,7 +231,7 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 
 	// Draw ball
 	_ = renderer.DrawChar('O', int(s.ball.Position.X), int(s.ball.Position.Y), render.ColorWhite)
-	s.drawObjOverlay(int(s.ball.Position.X), int(s.ball.Position.X), render.ColorWhite)
+	// s.drawObjOverlay(int(s.ball.Position.X), int(s.ball.Position.X), render.ColorWhite)
 
 	// Draw bricks
 	for _, brick := range s.bricks {
@@ -280,73 +280,122 @@ func (s *PlayingScene) updateCollisions(_ float64) {
 		return
 	}
 
-	// Ball/Wall collisions
+	s.handleWallCollisions()
+	s.handlePaddleCollision()
+	s.handleBrickCollisions()
+}
+
+func (s *PlayingScene) handleWallCollisions() {
+	// Side walls
 	if s.ball.Position.X <= 0 || s.ball.Position.X >= float64(s.Width) {
 		s.ball.Velocity.X = -s.ball.Velocity.X
-		// Ensure minimum X velocity to prevent vertical lock
-		if math.Abs(s.ball.Velocity.X) < s.Config.BallMinXVelocity {
-			if s.ball.Velocity.X < 0 {
-				s.ball.Velocity.X = -s.Config.BallMinXVelocity
-			} else {
-				s.ball.Velocity.X = s.Config.BallMinXVelocity
-			}
-		}
+		s.ensureMinimumVelocity()
 	}
+	
+	// Top wall
 	if s.ball.Position.Y <= 0 {
 		s.ball.Velocity.Y = -s.ball.Velocity.Y
-		// Ensure minimum Y velocity to prevent horizontal lock at top
-		if math.Abs(s.ball.Velocity.Y) < s.Config.BallMinYVelocity {
-			s.ball.Velocity.Y = s.Config.BallMinYVelocity
-		}
+		s.ensureMinimumVelocity()
 	}
+	
+	// Bottom (death)
 	if s.ball.Position.Y >= float64(s.Height) {
 		s.lives--
 		s.resetBall()
 	}
+}
 
-	// Ball/Paddle collision
-	if s.ball.Position.Y >= s.paddle.Position.Y-1 &&
-		s.ball.Position.Y <= s.paddle.Position.Y &&
-		s.ball.Position.X >= s.paddle.Position.X &&
-		s.ball.Position.X <= s.paddle.Position.X+s.paddle.Width {
-		// Calculate reflection angle based on where ball hits paddle
-		hitPos := (s.ball.Position.X - s.paddle.Position.X) / s.paddle.Width
-		angle := (hitPos - 0.5) * 2 // -1 to 1
-		s.ball.Velocity.X = angle * s.Config.BallSpeed
-		s.ball.Velocity.Y = -s.Config.BallSpeed
+func (s *PlayingScene) handlePaddleCollision() {
+	paddleLeft := s.paddle.Position.X
+	paddleRight := s.paddle.Position.X + s.paddle.Width
+	paddleTop := s.paddle.Position.Y
+	ballBottom := s.ball.Position.Y + s.ball.Height
 
-		// Ensure minimum velocities
-		if math.Abs(s.ball.Velocity.X) < s.Config.BallMinXVelocity {
-			if s.ball.Velocity.X < 0 {
-				s.ball.Velocity.X = -s.Config.BallMinXVelocity
-			} else {
-				s.ball.Velocity.X = s.Config.BallMinXVelocity
-			}
-		}
-		if math.Abs(s.ball.Velocity.Y) < s.Config.BallMinYVelocity {
-			if s.ball.Velocity.Y < 0 {
-				s.ball.Velocity.Y = -s.Config.BallMinYVelocity
-			} else {
-				s.ball.Velocity.Y = s.Config.BallMinYVelocity
-			}
-		}
+	// Check if ball is within paddle bounds
+	if ballBottom >= paddleTop && 
+	   s.ball.Position.Y <= paddleTop &&
+	   s.ball.Position.X+s.ball.Width >= paddleLeft &&
+	   s.ball.Position.X <= paddleRight {
+		
+		// Calculate hit position relative to paddle center
+		paddleCenter := paddleLeft + (s.paddle.Width / 2)
+		hitOffset := (s.ball.Position.X - paddleCenter) / (s.paddle.Width / 2)
+		
+		// More dynamic angle based on hit position
+		angle := hitOffset * math.Pi / 3 // 60 degree max angle
+		speed := math.Sqrt(math.Pow(s.ball.Velocity.X, 2) + math.Pow(s.ball.Velocity.Y, 2))
+		
+		s.ball.Velocity.X = speed * math.Sin(angle)
+		s.ball.Velocity.Y = -speed * math.Cos(angle)
+		
+		s.ensureMinimumVelocity()
+		
+		// Move ball out of paddle to prevent multiple collisions
+		s.ball.Position.Y = paddleTop - s.ball.Height
 	}
+}
 
-	// Ball/Brick collisions
+func (s *PlayingScene) handleBrickCollisions() {
 	for i := len(s.bricks) - 1; i >= 0; i-- {
 		brick := s.bricks[i]
-		if s.ball.Position.Y >= brick.Position.Y &&
-			s.ball.Position.Y <= brick.Position.Y+brick.Height &&
-			s.ball.Position.X >= brick.Position.X &&
-			s.ball.Position.X <= brick.Position.X+brick.Width {
+		
+		// Calculate brick edges
+		brickLeft := brick.Position.X
+		brickRight := brick.Position.X + brick.Width
+		brickTop := brick.Position.Y
+		brickBottom := brick.Position.Y + brick.Height
+		
+		// Check if ball intersects with brick
+		if s.ball.Position.X+s.ball.Width >= brickLeft &&
+		   s.ball.Position.X <= brickRight &&
+		   s.ball.Position.Y+s.ball.Height >= brickTop &&
+		   s.ball.Position.Y <= brickBottom {
+			
+			// Determine collision side
+			fromLeft := math.Abs(s.ball.Position.X + s.ball.Width - brickLeft)
+			fromRight := math.Abs(s.ball.Position.X - brickRight)
+			fromTop := math.Abs(s.ball.Position.Y + s.ball.Height - brickTop)
+			fromBottom := math.Abs(s.ball.Position.Y - brickBottom)
+			
+			// Find smallest penetration
+			min := math.Min(fromLeft, math.Min(fromRight, math.Min(fromTop, fromBottom)))
+			
+			// Reflect based on collision side
+			switch min {
+			case fromLeft, fromRight:
+				s.ball.Velocity.X = -s.ball.Velocity.X
+			case fromTop, fromBottom:
+				s.ball.Velocity.Y = -s.ball.Velocity.Y
+			}
+			
 			brick.Health--
 			if brick.Health <= 0 {
 				s.Score += brick.Points
-				// Remove brick
 				s.bricks = append(s.bricks[:i], s.bricks[i+1:]...)
 			}
-			s.ball.Velocity.Y = -s.ball.Velocity.Y
+			
+			s.ensureMinimumVelocity()
 			break
+		}
+	}
+}
+
+func (s *PlayingScene) ensureMinimumVelocity() {
+	// Ensure minimum X velocity
+	if math.Abs(s.ball.Velocity.X) < s.Config.BallMinXVelocity {
+		if s.ball.Velocity.X < 0 {
+			s.ball.Velocity.X = -s.Config.BallMinXVelocity
+		} else {
+			s.ball.Velocity.X = s.Config.BallMinXVelocity
+		}
+	}
+	
+	// Ensure minimum Y velocity
+	if math.Abs(s.ball.Velocity.Y) < s.Config.BallMinYVelocity {
+		if s.ball.Velocity.Y < 0 {
+			s.ball.Velocity.Y = -s.Config.BallMinYVelocity
+		} else {
+			s.ball.Velocity.Y = s.Config.BallMinYVelocity
 		}
 	}
 }
@@ -362,6 +411,7 @@ func (s *PlayingScene) initializeBricks() {
 	s.bricks = make([]*Brick, 0)
 
 	brickColors := []render.Color{
+		render.ColorMagenta,
 		render.ColorRed,
 		render.ColorYellow,
 		render.ColorGreen,
