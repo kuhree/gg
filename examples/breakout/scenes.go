@@ -115,8 +115,8 @@ func NewPlayingScene(game *Game) *PlayingScene {
 	scene.ball = &Ball{
 		GameObject: GameObject{
 			Position: Vector2D{
-				X: scene.paddle.Position.X,
-				Y: scene.paddle.Position.Y - 1,
+				X: scene.paddle.Position.X + scene.paddle.Width/2,
+				Y: scene.paddle.Position.Y - game.Config.BallSize,
 			},
 			Width:  game.Config.BallSize,
 			Height: game.Config.BallSize,
@@ -354,7 +354,7 @@ func (s *PlayingScene) updateCollisions(_ float64) {
 func (s *PlayingScene) resetBall() {
 	s.ball.Attached = true
 	s.ball.Position.X = s.paddle.Position.X + s.paddle.Width/2
-	s.ball.Position.Y = s.paddle.Position.Y - 1
+	s.ball.Position.Y = s.paddle.Position.Y - s.Config.BallSize
 	s.ball.Velocity = Vector2D{X: 0, Y: 0}
 }
 
