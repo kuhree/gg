@@ -94,7 +94,7 @@ func NewPlayingScene(game *Game) *PlayingScene {
 			blinkInterval: 0.5,
 			showOnBlink:   true,
 		},
-		lives: 3,
+		lives: game.Config.InitialLives,
 	}
 
 	// Initialize paddle
@@ -104,10 +104,10 @@ func NewPlayingScene(game *Game) *PlayingScene {
 				X: float64(game.Width) / 2,
 				Y: float64(game.Height) - 2,
 			},
-			Width:  10,
-			Height: 1,
+			Width:  game.Config.PaddleWidth,
+			Height: game.Config.PaddleHeight,
 		},
-		Speed: 1.0,
+		Speed: game.Config.PaddleSpeed,
 	}
 
 	// Initialize ball
@@ -117,8 +117,8 @@ func NewPlayingScene(game *Game) *PlayingScene {
 				X: scene.paddle.Position.X,
 				Y: scene.paddle.Position.Y - 1,
 			},
-			Width:  1,
-			Height: 1,
+			Width:  game.Config.BallSize,
+			Height: game.Config.BallSize,
 		},
 		Velocity: Vector2D{X: 0, Y: 0},
 		Attached: true,
@@ -264,7 +264,7 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 	case ' ': // Spacebar launches the ball
 		if s.ball.Attached {
 			s.ball.Attached = false
-			s.ball.Velocity = Vector2D{X: 10.0, Y: -10.0}
+			s.ball.Velocity = Vector2D{X: s.Config.BallVelocityX, Y: s.Config.BallVelocityY}
 		}
 	}
 
@@ -339,12 +339,12 @@ func (s *PlayingScene) initializeBricks() {
 		render.ColorBlue,
 	}
 
-	brickWidth := 8.0
-	brickHeight := 1.0
-	rows := 4
+	brickWidth := s.Config.BrickWidth
+	brickHeight := s.Config.BrickHeight
+	rows := s.Config.BrickRows
 
 	for row := 0; row < rows; row++ {
-		y := float64(row*2 + 3)
+		y := s.Config.BrickStartY + float64(row)*s.Config.BrickSpacing
 		bricksInRow := int(float64(s.Width) / brickWidth)
 
 		for col := 0; col < bricksInRow; col++ {
@@ -503,7 +503,7 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 	// Draw leaderboard
 	leaderboardY := int(float64(height) * leaderboardOffset)
 	_ = renderer.DrawText("Top Scores:", startX, leaderboardY, render.ColorBlue)
-	topScores := s.Leaderboard.TopScores(5)
+	topScores := s.Leaderboard.TopScores(s.Config.LeaderboardSize)
 	for i, entry := range topScores {
 		_ = renderer.DrawText(fmt.Sprintf("%d | %s > %s", entry.Score, entry.Name, entry.Details), startX, leaderboardY+(i+1)*lineSpacing, render.ColorWhite)
 	}
@@ -534,7 +534,7 @@ func (s *GameOverScene) HandleInput(input core.InputEvent) error {
 			}
 		default:
 			// Only allow printable characters
-			if input.Rune >= 32 && input.Rune <= 126 && len(s.name) < 20 {
+			if input.Rune >= 32 && input.Rune <= 126 && len(s.name) < s.Config.MaxNameLength {
 				s.name += string(input.Rune)
 			}
 		}
