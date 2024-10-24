@@ -21,7 +21,8 @@ GG is a bunch of classic games written in Go. It's designed to create classic ar
 The `examples/` directory contains implementations of classic 2D games, including:
 
 1. Space Invaders
-2. ???
+2. Conway's Game of life
+3. Breakout*
 
 > \*Not yet implemented
 
@@ -42,6 +43,10 @@ The game launcher can be used in the following ways:
 - `gg`: Launch a menu to choose games
 - `gg [game]`: Launch directly into a specific game
 - `--debug`: Enable Debug logging
+- `--overlay`: Enable Debug overlay
+- `--time`: Target time in FPS
+- `--fps`: Target fps
+- `--height,--width`: Target height/width of the render
 
 While in game:
 
@@ -49,18 +54,15 @@ While in game:
 - Spacebar for primary action (shoot, jump, etc.)
 - 'P' to pause the game
 - 'ESC/Q' to pause/quit the current game 
-- 'F1' to toggle dev modez
-- 'F2' to toggle dev overlays
 
-In dev mode:
+Developer tools:
 
-- 'F2' to toggle performance metrics display
-- 'F3' to toggle debug information overlay
+- '1' to toggle debug information overlay
+- '2' to toggle performance metrics display
 - 'F4' to toggle entity bounding box visualization
 - 'F5' to toggle collision detection visualization
 - 'F6' to open the game state inspector
-- '[' and ']' to adjust game speed (slow motion / speed up)
-- ',' and '.' for frame-by-frame stepping (when paused)
+- '_' and '+' to increase/decrease level
 
 For game-specific controls and instructions, refer to the in-game help menu or the individual game's documentation in the `games/` directory.
 
