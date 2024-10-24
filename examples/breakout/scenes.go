@@ -524,12 +524,17 @@ func (s *GameOverScene) HandleInput(input core.InputEvent) error {
 			}
 		case core.KeyEnter:
 			if len(s.name) > 0 {
-				s.nameEntered = true
-				s.Logger.Info("Adding leaderboard entry...", "name", s.name, "score", s.Score)
-				s.Leaderboard.Add(s.name, s.Score, s.GetDetails())
-				err := s.Leaderboard.Save(s.Config.BoardFile)
-				if err != nil {
-					return err
+				if s.Score > 0 {
+					s.nameEntered = true
+					s.Logger.Info("Adding leaderboard entry...", "name", s.name, "score", s.Score)
+					s.Leaderboard.Add(s.name, s.Score, s.GetDetails())
+					err := s.Leaderboard.Save(s.Config.BoardFile)
+					if err != nil {
+						return err
+					}
+				} else {
+					s.Logger.Info("Score is 0, not adding to leaderboard")
+					s.Scenes.ChangeScene(MainMenuSceneID)
 				}
 			}
 		default:
