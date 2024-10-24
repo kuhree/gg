@@ -187,25 +187,9 @@ func (r *Renderer) DrawRect(x, y, width, height int, char rune, color Color) err
 	return nil
 }
 
-func (r *Renderer) DrawBorder(color Color) {
-	for x := 0; x < r.width; x++ {
-		r.DrawChar(LightHorizontal, x, 0, color)
-		r.DrawChar(LightHorizontal, x, r.height-1, color)
-	}
-	for y := 0; y < r.height; y++ {
-		r.DrawChar(LightVertical, 0, y, color)
-		r.DrawChar(LightVertical, r.width-1, y, color)
-	}
-	r.DrawChar(LightDownAndRight, 0, 0, color)
-	r.DrawChar(LightDownAndLeft, r.width-1, 0, color)
-	r.DrawChar(LightUpAndRight, 0, r.height-1, color)
-	r.DrawChar(LightUpAndLeft, r.width-1, r.height-1, color)
-}
-
 // Render outputs the current buffer to the console
 func (r *Renderer) Render() {
 	fmt.Print("\033[H\033[2J") // Clear the console
-	r.DrawBorder(ColorWhite)
 
 	var sb strings.Builder
 	sb.Grow(r.width * r.height * 20) // Estimate capacity
