@@ -28,6 +28,7 @@ type Config struct {
 	BallVelocityX      float64
 	BallVelocityY      float64
 	BallMinXVelocity   float64
+	BallMinYVelocity   float64
 
 	// Brick config
 	BrickWidth   float64
@@ -61,6 +62,7 @@ func NewConfig(workDir string) (*Config, error) {
 		BallVelocityX:     10.0,
 		BallVelocityY:     -10.0,
 		BallMinXVelocity:  2.0,
+		BallMinYVelocity:  5.0,
 
 		BrickWidth:   8.0,
 		BrickHeight:  1.0,

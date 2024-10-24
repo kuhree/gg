@@ -308,8 +308,24 @@ func (s *PlayingScene) updateCollisions(_ float64) {
 		// Calculate reflection angle based on where ball hits paddle
 		hitPos := (s.ball.Position.X - s.paddle.Position.X) / s.paddle.Width
 		angle := (hitPos - 0.5) * 2 // -1 to 1
-		s.ball.Velocity.X = angle
-		s.ball.Velocity.Y = -10.0
+		s.ball.Velocity.X = angle * s.Config.BallSpeed
+		s.ball.Velocity.Y = -s.Config.BallSpeed
+
+		// Ensure minimum velocities
+		if math.Abs(s.ball.Velocity.X) < s.Config.BallMinXVelocity {
+			if s.ball.Velocity.X < 0 {
+				s.ball.Velocity.X = -s.Config.BallMinXVelocity
+			} else {
+				s.ball.Velocity.X = s.Config.BallMinXVelocity
+			}
+		}
+		if math.Abs(s.ball.Velocity.Y) < s.Config.BallMinYVelocity {
+			if s.ball.Velocity.Y < 0 {
+				s.ball.Velocity.Y = -s.Config.BallMinYVelocity
+			} else {
+				s.ball.Velocity.Y = s.Config.BallMinYVelocity
+			}
+		}
 	}
 
 	// Ball/Brick collisions
