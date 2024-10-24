@@ -54,10 +54,11 @@ type MainMenuScene struct {
 // PlayingScene represents the main gameplay
 type PlayingScene struct {
 	BaseScene
-	paddle    *Paddle
-	ball      *Ball
-	bricks    []*Brick
-	gameSpeed float64
+
+	lives  int
+	paddle *Paddle
+	ball   *Ball
+	bricks []*Brick
 }
 
 // PauseMenuScene represents the pause menu
@@ -93,7 +94,7 @@ func NewPlayingScene(game *Game) *PlayingScene {
 			blinkInterval: 0.5,
 			showOnBlink:   true,
 		},
-		gameSpeed: 60.0,
+		lives: 3,
 	}
 
 	// Initialize paddle
@@ -106,7 +107,7 @@ func NewPlayingScene(game *Game) *PlayingScene {
 			Width:  10,
 			Height: 1,
 		},
-		Speed: 30.0,
+		Speed: 1.0,
 	}
 
 	// Initialize ball
@@ -208,8 +209,8 @@ func (s *PlayingScene) Update(dt float64) {
 		s.ball.Position.X = s.paddle.Position.X + s.paddle.Width/2
 		s.ball.Position.Y = s.paddle.Position.Y - 1
 	} else {
-		s.ball.Position.X += s.ball.Velocity.X * dt * s.gameSpeed
-		s.ball.Position.Y += s.ball.Velocity.Y * dt * s.gameSpeed
+		s.ball.Position.X += s.ball.Velocity.X * dt
+		s.ball.Position.Y += s.ball.Velocity.Y * dt
 	}
 
 	s.updateCollisions(dt)
@@ -222,23 +223,28 @@ func (s *PlayingScene) Update(dt float64) {
 func (s *PlayingScene) Draw(renderer *render.Renderer) {
 	// Draw paddle
 	for x := int(s.paddle.Position.X); x < int(s.paddle.Position.X+s.paddle.Width); x++ {
-		renderer.DrawChar('=', x, int(s.paddle.Position.Y), render.ColorCyan)
+		y := int(s.paddle.Position.Y)
+		_ = renderer.DrawChar('=', x, y, render.ColorCyan)
+		s.drawObjOverlay(x, y, render.ColorCyan)
 	}
 
 	// Draw ball
-	renderer.DrawChar('O', int(s.ball.Position.X), int(s.ball.Position.Y), render.ColorWhite)
+	_ = renderer.DrawChar('O', int(s.ball.Position.X), int(s.ball.Position.Y), render.ColorWhite)
+	s.drawObjOverlay(int(s.ball.Position.X), int(s.ball.Position.X), render.ColorWhite)
 
 	// Draw bricks
 	for _, brick := range s.bricks {
 		for x := int(brick.Position.X); x < int(brick.Position.X+brick.Width); x++ {
-			renderer.DrawChar('#', x, int(brick.Position.Y), brick.Color)
+			y := int(brick.Position.Y)
+			_ = renderer.DrawChar('#', x, y, brick.Color)
+			s.drawObjOverlay(x, y, brick.Color)
 		}
 	}
 
 	// Draw score, level, lives
-	renderer.DrawText(fmt.Sprintf("Score: %d", s.Score), 1, 1, render.ColorWhite)
-	renderer.DrawText(fmt.Sprintf("Level: %d", s.CurrentLevel), 1, 2, render.ColorWhite)
-	renderer.DrawText(fmt.Sprintf("Lives: %d", s.Lives), s.Width-10, 1, render.ColorWhite)
+	_ = renderer.DrawText(fmt.Sprintf("Score: %d", s.Score), 1, 1, render.ColorWhite)
+	_ = renderer.DrawText(fmt.Sprintf("Level: %d", s.CurrentLevel), 1, 2, render.ColorWhite)
+	_ = renderer.DrawText(fmt.Sprintf("Lives: %d", s.lives), s.Width-10, 1, render.ColorWhite)
 }
 
 func (s *PlayingScene) HandleInput(input core.InputEvent) error {
@@ -251,14 +257,14 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 		s.Scenes.ChangeScene(PauseMenuSceneID)
 	case 'q', 'Q':
 		s.Scenes.ChangeScene(GameOverSceneID)
-	case core.KeyLeft, 'a', 'A':
-		s.paddle.Position.X -= s.paddle.Speed / s.gameSpeed
-	case core.KeyRight, 'd', 'D':
-		s.paddle.Position.X += s.paddle.Speed / s.gameSpeed
-	case ' ':  // Spacebar launches the ball
+	case 'a', 'A':
+		s.paddle.Position.X -= s.paddle.Speed
+	case 'd', 'D':
+		s.paddle.Position.X += s.paddle.Speed
+	case ' ': // Spacebar launches the ball
 		if s.ball.Attached {
 			s.ball.Attached = false
-			s.ball.Velocity = Vector2D{X: 0.5, Y: -1.0}
+			s.ball.Velocity = Vector2D{X: 10.0, Y: -10.0}
 		}
 	}
 
@@ -273,7 +279,7 @@ func (s *PlayingScene) updateCollisions(_ float64) {
 		return
 	}
 
-	// Ball-Wall collisions
+	// Ball/Wall collisions
 	if s.ball.Position.X <= 0 || s.ball.Position.X >= float64(s.Width) {
 		s.ball.Velocity.X = -s.ball.Velocity.X
 	}
@@ -281,29 +287,29 @@ func (s *PlayingScene) updateCollisions(_ float64) {
 		s.ball.Velocity.Y = -s.ball.Velocity.Y
 	}
 	if s.ball.Position.Y >= float64(s.Height) {
-		s.Lives--
+		s.lives--
 		s.resetBall()
 	}
 
-	// Ball-Paddle collision
-	if s.ball.Position.Y >= s.paddle.Position.Y-1 && 
-	   s.ball.Position.Y <= s.paddle.Position.Y &&
-	   s.ball.Position.X >= s.paddle.Position.X &&
-	   s.ball.Position.X <= s.paddle.Position.X+s.paddle.Width {
+	// Ball/Paddle collision
+	if s.ball.Position.Y >= s.paddle.Position.Y-1 &&
+		s.ball.Position.Y <= s.paddle.Position.Y &&
+		s.ball.Position.X >= s.paddle.Position.X &&
+		s.ball.Position.X <= s.paddle.Position.X+s.paddle.Width {
 		// Calculate reflection angle based on where ball hits paddle
 		hitPos := (s.ball.Position.X - s.paddle.Position.X) / s.paddle.Width
 		angle := (hitPos - 0.5) * 2 // -1 to 1
 		s.ball.Velocity.X = angle
-		s.ball.Velocity.Y = -1
+		s.ball.Velocity.Y = -10.0
 	}
 
-	// Ball-Brick collisions
+	// Ball/Brick collisions
 	for i := len(s.bricks) - 1; i >= 0; i-- {
 		brick := s.bricks[i]
 		if s.ball.Position.Y >= brick.Position.Y &&
-		   s.ball.Position.Y <= brick.Position.Y+brick.Height &&
-		   s.ball.Position.X >= brick.Position.X &&
-		   s.ball.Position.X <= brick.Position.X+brick.Width {
+			s.ball.Position.Y <= brick.Position.Y+brick.Height &&
+			s.ball.Position.X >= brick.Position.X &&
+			s.ball.Position.X <= brick.Position.X+brick.Width {
 			brick.Health--
 			if brick.Health <= 0 {
 				s.Score += brick.Points
@@ -325,25 +331,25 @@ func (s *PlayingScene) resetBall() {
 
 func (s *PlayingScene) initializeBricks() {
 	s.bricks = make([]*Brick, 0)
-	
+
 	brickColors := []render.Color{
 		render.ColorRed,
 		render.ColorYellow,
 		render.ColorGreen,
 		render.ColorBlue,
 	}
-	
+
 	brickWidth := 8.0
 	brickHeight := 1.0
 	rows := 4
-	
+
 	for row := 0; row < rows; row++ {
 		y := float64(row*2 + 3)
 		bricksInRow := int(float64(s.Width) / brickWidth)
-		
+
 		for col := 0; col < bricksInRow; col++ {
 			x := float64(col) * brickWidth
-			
+
 			brick := &Brick{
 				GameObject: GameObject{
 					Position: Vector2D{X: x, Y: y},
@@ -361,17 +367,17 @@ func (s *PlayingScene) initializeBricks() {
 
 // checkGameState determines if the game should end
 func (s *PlayingScene) checkGameState(_ float64) (bool, string) {
-	if s.Lives <= 0 {
+	if s.lives <= 0 {
 		return true, "Out of lives"
 	}
-	
+
 	if len(s.bricks) == 0 {
 		s.CurrentLevel++
 		s.initializeBricks()
 		s.resetBall()
 		return false, ""
 	}
-	
+
 	return false, ""
 }
 
@@ -391,9 +397,13 @@ func (s *PlayingScene) drawObjOverlay(x, y int, color render.Color) {
 	}
 
 	if s.Debug {
-		debugInfo := []string{}
+		debugInfo := []string{
+			fmt.Sprintf("Pos: (%.1f,%.1f)", float64(x), float64(y)),
+			fmt.Sprintf("Col: %d", color),
+		}
+
 		for i, info := range debugInfo {
-			_ = s.Renderer.DrawText(info, x, y+i, color)
+			_ = s.Renderer.DrawText(info, x+1, y+i, color)
 		}
 	}
 }
