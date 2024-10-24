@@ -1,5 +1,7 @@
 package breakout
 
+import "github.com/kuhree/gg/internal/engine/render"
+
 // Vector2D represents a 2D position or velocity
 type Vector2D struct {
 	X, Y float64
