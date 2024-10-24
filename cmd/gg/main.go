@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/kuhree/gg/examples/breakout"
 	"github.com/kuhree/gg/examples/frames"
 	gameoflife "github.com/kuhree/gg/examples/game_of_life"
 	"github.com/kuhree/gg/examples/space_invaders"
@@ -182,6 +183,24 @@ var games = []GGGame{
 		"Cellular automaton simulation",
 		func() error {
 			game, err := gameoflife.NewGame(width, height, workDir, debug, overlay)
+			if err != nil {
+				return err
+			}
+
+			gl := core.NewGameLoop(game)
+			if err := gl.Run(time, fps); err != nil {
+				return err
+			}
+			defer gl.Stop()
+
+			return nil
+		},
+	},
+	{
+		"Breakout",
+		"Brick Breakerr",
+		func() error {
+			game, err := breakout.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
 				return err
 			}
