@@ -284,11 +284,11 @@ func (s *PlayingScene) updateCollisions(_ float64) {
 	if s.ball.Position.X <= 0 || s.ball.Position.X >= float64(s.Width) {
 		s.ball.Velocity.X = -s.ball.Velocity.X
 		// Ensure minimum X velocity to prevent vertical lock
-		if math.Abs(s.ball.Velocity.X) < 2.0 {
+		if math.Abs(s.ball.Velocity.X) < s.Config.BallMinXVelocity {
 			if s.ball.Velocity.X < 0 {
-				s.ball.Velocity.X = -2.0
+				s.ball.Velocity.X = -s.Config.BallMinXVelocity
 			} else {
-				s.ball.Velocity.X = 2.0
+				s.ball.Velocity.X = s.Config.BallMinXVelocity
 			}
 		}
 	}
