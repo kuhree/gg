@@ -567,15 +567,16 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 	// Draw title and game over message
 	_ = renderer.DrawText(fmt.Sprintf("%s - %s", s.Config.Title, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
 
-	if !s.nameEntered {
-		// Draw name entry prompt
-		_ = renderer.DrawText("Enter your name:", startX, int(float64(height)*scoreOffset), render.ColorWhite)
+	if s.Score > 0 && !s.nameEntered {
+		// Draw name entry prompt and score
+		_ = renderer.DrawText(fmt.Sprintf("Score: %d", s.Score), startX, int(float64(height)*scoreOffset), render.ColorWhite)
+		_ = renderer.DrawText("Enter your name to save score (or press Q to skip):", startX, int(float64(height)*scoreOffset)+1, render.ColorWhite)
 		if s.showOnBlink {
 			_ = renderer.DrawText(s.name+"_", startX, int(float64(height)*scoreOffset)+2, render.ColorBrightMagenta)
 		} else {
 			_ = renderer.DrawText(s.name, startX, int(float64(height)*scoreOffset)+2, render.ColorBrightMagenta)
 		}
-	} else if s.showOnBlink {
+	} else if s.Score > 0 && s.showOnBlink {
 		_ = renderer.DrawText(
 			fmt.Sprintf("%d | %s > %s", s.Score, s.name, s.GetDetails()),
 			startX,
@@ -600,14 +601,16 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 }
 
 func (s *GameOverScene) HandleInput(input core.InputEvent) error {
-	if !s.nameEntered {
-		switch input.Rune {
-		case core.KeyBackspace:
-			if len(s.name) > 0 {
-				s.name = s.name[:len(s.name)-1]
-			}
-		case core.KeyEnter:
-			if len(s.name) > 0 {
+	switch input.Rune {
+	case 'q', 'Q':
+		if !s.nameEntered && s.Score > 0 {
+			s.Logger.Info("Skipping leaderboard entry")
+			s.nameEntered = true
+		}
+		return core.ErrQuitGame
+	case core.KeyEnter:
+		if !s.nameEntered {
+			if len(s.name) > 0 && s.Score > 0 {
 				s.nameEntered = true
 				s.Logger.Info("Adding leaderboard entry...", "name", s.name, "score", s.Score)
 				s.Leaderboard.Add(s.name, s.Score, s.GetDetails())
@@ -616,28 +619,20 @@ func (s *GameOverScene) HandleInput(input core.InputEvent) error {
 					return err
 				}
 			}
-		default:
+		} else {
+			s.Scenes.ChangeScene(MainMenuSceneID)
+		}
+	case core.KeyBackspace:
+		if !s.nameEntered && len(s.name) > 0 {
+			s.name = s.name[:len(s.name)-1]
+		}
+	default:
+		if !s.nameEntered {
 			// Only allow printable characters
-			if input.Rune >= 32 && input.Rune <= 126 && len(s.name) < 20 {
+			if input.Rune >= 32 && input.Rune <= 126 && len(s.name) < 12 {
 				s.name += string(input.Rune)
 			}
 		}
-		return nil
-	}
-
-	switch input.Rune {
-	case core.KeyEnter:
-		s.Scenes.ChangeScene(MainMenuSceneID)
-	case 'q', 'Q':
-		return core.ErrQuitGame
 	}
 	return nil
 }
-
-
-
-
-
-
-
-

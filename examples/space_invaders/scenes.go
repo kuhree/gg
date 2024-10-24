@@ -9,6 +9,11 @@ import (
 	"github.com/kuhree/gg/internal/engine/render"
 )
 
+const (
+		titleOffset    = 1.0 / 10
+		lineSpacing    = 2
+)
+
 // BaseScene provides common functionality for all scenes
 type BaseScene struct {
 	*Game
@@ -24,6 +29,7 @@ func (s *BaseScene) Enter() {
 }
 
 // Exit logs when a scene is exited
+
 func (s *BaseScene) Exit() {
 	s.Logger.Info("Exiting scene", "scene", s.sceneName)
 }
@@ -120,10 +126,8 @@ func (s *MainMenuScene) Draw(renderer *render.Renderer) {
 	startX := width / 10
 
 	const (
-		titleOffset    = 1.0 / 10
 		startOffset    = 1.0 / 6
 		controlsOffset = 2.0 / 8
-		lineSpacing    = 2
 	)
 
 	_ = renderer.DrawText(fmt.Sprintf("%s - %s", s.Config.Title, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
@@ -410,11 +414,9 @@ func (s *GameOverScene) GetDetails() string {
 
 func (s *GameOverScene) Draw(renderer *render.Renderer) {
 	const (
-		titleOffset       = 1.0 / 10
 		scoreOffset       = 1.0 / 6
 		leaderboardOffset = 1.0 / 4
 		controlsOffset    = 3.0 / 4
-		lineSpacing       = 2
 	)
 
 	width, height := s.Size()
@@ -423,15 +425,16 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 	// Draw title and game over message
 	_ = renderer.DrawText(fmt.Sprintf("%s - %s", s.Config.Title, s.sceneName), startX, int(float64(height)*titleOffset), render.ColorWhite)
 
-	if !s.nameEntered {
-		// Draw name entry prompt
-		_ = renderer.DrawText("Enter your name:", startX, int(float64(height)*scoreOffset), render.ColorWhite)
+	if s.Score > 0 && !s.nameEntered {
+		// Draw name entry prompt and score
+		_ = renderer.DrawText(fmt.Sprintf("Score: %d", s.Score), startX, int(float64(height)*scoreOffset), render.ColorWhite)
+		_ = renderer.DrawText("Enter your name to save score (or press Q to skip):", startX, int(float64(height)*scoreOffset)+1, render.ColorWhite)
 		if s.showOnBlink {
 			_ = renderer.DrawText(s.name+"_", startX, int(float64(height)*scoreOffset)+2, render.ColorBrightMagenta)
 		} else {
 			_ = renderer.DrawText(s.name, startX, int(float64(height)*scoreOffset)+2, render.ColorBrightMagenta)
 		}
-	} else if s.showOnBlink {
+	} else if s.Score > 0 && s.showOnBlink {
 		_ = renderer.DrawText(
 			fmt.Sprintf("%d | %s > %s", s.Score, s.name, s.GetDetails()),
 			startX,
@@ -452,18 +455,20 @@ func (s *GameOverScene) Draw(renderer *render.Renderer) {
 	controlsY := int(float64(height) * controlsOffset)
 	_ = renderer.DrawText("Controls:", startX, controlsY, render.ColorBlue)
 	_ = renderer.DrawText("Press Q to quit the game", startX, controlsY+lineSpacing, render.ColorWhite)
-	_ = renderer.DrawText("Press ENTER to save/return to main menu", startX, controlsY+2*lineSpacing, render.ColorWhite)
+	_ = renderer.DrawText("Press ENTER to return to save/return to main menu", startX, controlsY+2*lineSpacing, render.ColorWhite)
 }
 
 func (s *GameOverScene) HandleInput(input core.InputEvent) error {
-	if !s.nameEntered {
-		switch input.Rune {
-		case core.KeyBackspace:
-			if len(s.name) > 0 {
-				s.name = s.name[:len(s.name)-1]
-			}
-		case core.KeyEnter:
-			if len(s.name) > 0 {
+	switch input.Rune {
+	case 'q', 'Q':
+		if !s.nameEntered && s.Score > 0 {
+			s.Logger.Info("Skipping leaderboard entry")
+			s.nameEntered = true
+		}
+		return core.ErrQuitGame
+	case core.KeyEnter:
+		if !s.nameEntered {
+			if len(s.name) > 0 && s.Score > 0 {
 				s.nameEntered = true
 				s.Logger.Info("Adding leaderboard entry...", "name", s.name, "score", s.Score)
 				s.Leaderboard.Add(s.name, s.Score, s.GetDetails())
@@ -472,20 +477,20 @@ func (s *GameOverScene) HandleInput(input core.InputEvent) error {
 					return err
 				}
 			}
-		default:
+		} else {
+			s.Scenes.ChangeScene(MainMenuSceneID)
+		}
+	case core.KeyBackspace:
+		if !s.nameEntered && len(s.name) > 0 {
+			s.name = s.name[:len(s.name)-1]
+		}
+	default:
+		if !s.nameEntered {
 			// Only allow printable characters
-			if input.Rune >= 32 && input.Rune <= 126 && len(s.name) < 20 {
+			if input.Rune >= 32 && input.Rune <= 126 && len(s.name) < 12 {
 				s.name += string(input.Rune)
 			}
 		}
-		return nil
-	} 
-
-	switch input.Rune {
-	case core.KeyEnter:
-		s.Scenes.ChangeScene(MainMenuSceneID)
-	case 'q', 'Q':
-		return core.ErrQuitGame
 	}
 	return nil
 }
