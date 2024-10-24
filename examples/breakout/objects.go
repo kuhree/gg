@@ -12,8 +12,23 @@ type GameObject struct {
 	Width    float64
 }
 
-// Cell represents a single cell in the Game of Life
-type Cell struct {
+// Paddle represents the player-controlled paddle
+type Paddle struct {
 	GameObject
-	Alive bool
+	Speed float64
+}
+
+// Ball represents the bouncing ball
+type Ball struct {
+	GameObject
+	Velocity Vector2D
+	Attached bool // When true, ball moves with paddle before launch
+}
+
+// Brick represents a destructible brick
+type Brick struct {
+	GameObject
+	Health int
+	Points int
+	Color  render.Color
 }
