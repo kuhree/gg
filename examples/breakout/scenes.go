@@ -294,6 +294,10 @@ func (s *PlayingScene) updateCollisions(_ float64) {
 	}
 	if s.ball.Position.Y <= 0 {
 		s.ball.Velocity.Y = -s.ball.Velocity.Y
+		// Ensure minimum Y velocity to prevent horizontal lock at top
+		if math.Abs(s.ball.Velocity.Y) < s.Config.BallMinYVelocity {
+			s.ball.Velocity.Y = s.Config.BallMinYVelocity
+		}
 	}
 	if s.ball.Position.Y >= float64(s.Height) {
 		s.lives--
