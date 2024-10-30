@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/kuhree/gg/examples/breakout"
+	"github.com/kuhree/gg/examples/flappybird"
 	"github.com/kuhree/gg/examples/frames"
 	gameoflife "github.com/kuhree/gg/examples/game_of_life"
 	"github.com/kuhree/gg/examples/space_invaders"
@@ -117,7 +118,11 @@ func showGameMenu() {
 	var choice string
 	for {
 		fmt.Print("Enter the number or name of the game you want to play (or 'q' to quit): ")
-		fmt.Scanln(&choice)
+		_, err := fmt.Scanln(&choice)
+		if err != nil {
+			utils.Logger.Error("Failed to get game selection", "err", err)
+			os.Exit(1)
+		}
 
 		if choice == "q" {
 			utils.Logger.Info("Exiting game selection")
@@ -201,6 +206,24 @@ var games = []GGGame{
 		"Brick Breakerr",
 		func() error {
 			game, err := breakout.NewGame(width, height, workDir, debug, overlay)
+			if err != nil {
+				return err
+			}
+
+			gl := core.NewGameLoop(game)
+			if err := gl.Run(time, fps); err != nil {
+				return err
+			}
+			defer gl.Stop()
+
+			return nil
+		},
+	},
+	{
+		"Flappy Bird",
+		"Jump between the pipe, don't die",
+		func() error {
+			game, err := flappybird.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
 				return err
 			}

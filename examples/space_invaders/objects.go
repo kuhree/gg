@@ -1,28 +1,23 @@
 package space_invaders
 
-// Vector2D represents a 2D position or velocity
-type Vector2D struct {
-	X, Y float64
-}
+import "github.com/kuhree/gg/internal/engine/objects"
 
-// GameObject represents a basic game entity
-type GameObject struct {
-	Position Vector2D
-	Speed    Vector2D
-	Height   float64
-	Width    float64
+// Object represents a basic game entity
+type Object struct {
+	objects.GameObject
 
+	Speed    objects.Vector2D
 	Health    float64
 	MaxHealth float64
 }
 
-func (o *GameObject) Size() float64 {
+func (o *Object) Size() float64 {
 	return o.Height * o.Width
 }
 
 // Player represents the player's ship
 type Player struct {
-	GameObject
+	Object
 
 	Lives int
 }
@@ -31,7 +26,7 @@ type AlienType int
 
 // Alien represents an enemy alien
 type Alien struct {
-	GameObject
+	Object
 
 	AlienType     AlienType
 	shootCooldown float64
@@ -41,14 +36,14 @@ type Alien struct {
 
 // Projectile represents a projectile fired by the player or aliens
 type Projectile struct {
-	GameObject
+	Object
 
-	Source *GameObject
+	Source *Object
 }
 
 // Barrier represents a defensive structure
 type Barrier struct {
-	GameObject
+	Object
 
 	RegenerationRate float64
 }
@@ -56,7 +51,7 @@ type Barrier struct {
 type CollectableType int
 
 type Collectable struct {
-	GameObject
+	Object
 	CollectableType CollectableType
 	Duration        float64
 }
