@@ -53,20 +53,56 @@ func NewMainMenuScene(game *Game) *MainMenuScene {
 
 func (s *MainMenuScene) Draw(renderer *render.Renderer) {
 	width, height := s.Size()
-	startX := width / 10
-
-	_ = renderer.DrawText(fmt.Sprintf("%s - %s", s.Config.Title, s.sceneName), startX, int(float64(height)*s.Config.TitleOffset), render.ColorWhite)
-
-	if s.showOnBlink {
-		_ = renderer.DrawText("Press ENTER to start", startX, int(float64(height)*s.Config.ScoreOffset), render.ColorBrightMagenta)
+	
+	// Center box calculations
+	boxWidth := 50
+	boxHeight := 12
+	boxStartX := (width - boxWidth) / 2
+	boxStartY := (height - boxHeight) / 2
+	
+	// Draw decorative box
+	for y := 0; y < boxHeight; y++ {
+		for x := 0; x < boxWidth; x++ {
+			char := ' '
+			color := render.ColorBlack
+			
+			// Draw borders
+			if y == 0 || y == boxHeight-1 {
+				if x == 0 || x == boxWidth-1 {
+					char = '+'
+				} else {
+					char = '-'
+				}
+				color = render.ColorBlue
+			} else if x == 0 || x == boxWidth-1 {
+				char = '|'
+				color = render.ColorBlue
+			}
+			
+			_ = renderer.DrawChar(char, boxStartX+x, boxStartY+y, color)
+		}
 	}
-
-	controlsY := int(float64(height) * s.Config.ControlsOffset)
-	_ = renderer.DrawText("Controls:", startX, controlsY, render.ColorBlue)
-	_ = renderer.DrawText("1-3: Select sorting algorithm", startX, controlsY+s.Config.LineSpacing, render.ColorWhite)
-	_ = renderer.DrawText("R: Reset array", startX, controlsY+2*s.Config.LineSpacing, render.ColorWhite)
-	_ = renderer.DrawText("SPACE: Start/Pause sort", startX, controlsY+3*s.Config.LineSpacing, render.ColorWhite)
-	_ = renderer.DrawText("Q: Quit", startX, controlsY+4*s.Config.LineSpacing, render.ColorWhite)
+	
+	// Draw title centered in box
+	title := fmt.Sprintf("%s - %s", s.Config.Title, s.sceneName)
+	titleX := boxStartX + (boxWidth-len(title))/2
+	_ = renderer.DrawText(title, titleX, boxStartY+2, render.ColorWhite)
+	
+	// Draw blinking start message
+	if s.showOnBlink {
+		startMsg := "Press ENTER to start"
+		startX := boxStartX + (boxWidth-len(startMsg))/2
+		_ = renderer.DrawText(startMsg, startX, boxStartY+4, render.ColorBrightMagenta)
+	}
+	
+	// Draw controls section
+	controlsY := boxStartY + 6
+	controlsX := boxStartX + 3
+	_ = renderer.DrawText("Controls:", controlsX, controlsY, render.ColorBlue)
+	_ = renderer.DrawText("1-3: Select sorting algorithm", controlsX, controlsY+1, render.ColorWhite)
+	_ = renderer.DrawText("R: Reset array", controlsX, controlsY+2, render.ColorWhite)
+	_ = renderer.DrawText("SPACE: Start/Pause sort", controlsX, controlsY+3, render.ColorWhite)
+	_ = renderer.DrawText("Q: Quit", controlsX, controlsY+4, render.ColorWhite)
 }
 
 func (s *MainMenuScene) HandleInput(input core.InputEvent) error {

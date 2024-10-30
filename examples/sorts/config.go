@@ -29,9 +29,9 @@ func NewConfig(workDir string) (*Config, error) {
 		ScoreOffset:    1.0 / 6,
 		ControlsOffset: 2.0 / 8,
 
-		ArraySize:      50,
+		ArraySize:      100,
 		UpdateInterval: 0.1,
-		BarWidth:      1.5,
+		BarWidth:      1,
 		MaxValue:      100,
 	}
 
