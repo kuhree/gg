@@ -64,9 +64,10 @@ type PlayingScene struct {
 	gameStarted bool
 
 	// Current difficulty settings
-	currentPipeSpeed float64
-	currentPipeGap   float64
-	currentGravity   float64
+	currentPipeSpeed    float64
+	currentPipeGap      float64
+	currentGravity      float64
+	currentPipeSpacing  float64
 }
 
 // PauseMenuScene represents the pause menu
@@ -102,11 +103,12 @@ func NewPlayingScene(game *Game) *PlayingScene {
 			blinkInterval: 0.5,
 			showOnBlink:   true,
 		},
-		lives:            game.Config.InitialLives,
-		pipes:            make([]*Pipe, 0),
-		currentPipeSpeed: game.Config.PipeSpeed,
-		currentPipeGap:   game.Config.PipeGap,
-		currentGravity:   game.Config.BirdGravity,
+		lives:             game.Config.InitialLives,
+		pipes:             make([]*Pipe, 0),
+		currentPipeSpeed:  game.Config.PipeSpeed,
+		currentPipeGap:    game.Config.PipeGap,
+		currentGravity:    game.Config.BirdGravity,
+		currentPipeSpacing: game.Config.PipeSpacing,
 	}
 
 	return scene
@@ -195,7 +197,7 @@ func (s *PlayingScene) Update(dt float64) {
 
 	// Update pipes
 	s.pipeTimer += dt
-	if s.pipeTimer >= s.Config.PipeSpacing/s.currentPipeSpeed {
+	if s.pipeTimer >= s.currentPipeSpacing/s.currentPipeSpeed {
 		s.pipeTimer = 0
 		s.spawnPipes()
 	}
@@ -347,10 +349,11 @@ func (s *PlayingScene) updateCollisions(_ float64) {
 			
 			// Increase difficulty every 5 points
 			if s.Score%5 == 0 {
-				s.currentPipeSpeed *= 1.2  // Increase pipe speed by 20%
-				s.currentPipeGap *= 0.9    // Decrease gap by 10%
-				s.currentGravity *= 1.1    // Increase gravity by 10%
-				s.CurrentLevel++           // Track difficulty level
+				s.currentPipeSpeed *= 1.2     // Increase pipe speed by 20%
+				s.currentPipeGap *= 0.9       // Decrease gap by 10%
+				s.currentGravity *= 1.1       // Increase gravity by 10%
+				s.currentPipeSpacing *= 0.9   // Decrease spacing by 10%
+				s.CurrentLevel++              // Track difficulty level
 			}
 		}
 	}
