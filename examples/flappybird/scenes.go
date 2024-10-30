@@ -225,8 +225,8 @@ func (s *PlayingScene) spawnPipes() {
 	}
 
 	s.pipes = append(s.pipes,
-		NewPipe(float64(s.Width), 0, upperHeight, true),
-		NewPipe(float64(s.Width), gapY+s.Config.PipeGap/2, lowerHeight, false),
+		NewPipe(float64(s.Width), 0, upperHeight, s.Config.PipeWidth, true),
+		NewPipe(float64(s.Width), gapY+s.Config.PipeGap/2, lowerHeight, s.Config.PipeWidth, false),
 	)
 }
 
@@ -255,13 +255,17 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 		if pipe.IsUpperPipe {
 			for y := 0; y < int(pipe.Height); y++ {
 				_ = renderer.DrawChar('|', pipeX, y, pipe.Color)
-				_ = renderer.DrawChar('|', pipeX+1, y, pipe.Color)
+				for i := 0; i < int(pipe.Width); i++ {
+					_ = renderer.DrawChar('|', pipeX+i, y, pipe.Color)
+				}
 			}
 		} else {
 			startY := int(pipe.Position.Y)
 			for y := startY; y < startY+int(pipe.Height); y++ {
 				_ = renderer.DrawChar('|', pipeX, y, pipe.Color)
-				_ = renderer.DrawChar('|', pipeX+1, y, pipe.Color)
+				for i := 0; i < int(pipe.Width); i++ {
+					_ = renderer.DrawChar('|', pipeX+i, y, pipe.Color)
+				}
 			}
 		}
 

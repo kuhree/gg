@@ -31,6 +31,7 @@ type Config struct {
 	PipeGap       float64
 	PipeSpacing   float64
 	MinPipeHeight float64
+	PipeWidth     float64
 }
 
 func NewConfig(workDir string) (*Config, error) {
@@ -53,6 +54,7 @@ func NewConfig(workDir string) (*Config, error) {
 		PipeGap:       8.0,
 		PipeSpacing:   20.0,
 		MinPipeHeight: 3.0,
+		PipeWidth:     2.0,
 	}
 
 	err := config.LoadConfig(cfg)
