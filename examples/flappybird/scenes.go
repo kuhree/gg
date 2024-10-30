@@ -312,6 +312,22 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 		s.Scenes.ChangeScene(PauseMenuSceneID)
 	case 'q', 'Q':
 		s.Scenes.ChangeScene(GameOverSceneID)
+	case '=', '+':
+		// Increase level
+		s.CurrentLevel++
+		s.currentPipeSpeed = min(maxPipeSpeed, s.currentPipeSpeed*1.2)
+		s.currentPipeGap = max(minPipeGap, s.currentPipeGap*0.9)
+		s.currentGravity = min(maxGravity, s.currentGravity*1.1)
+		s.currentPipeSpacing = max(minPipeSpacing, s.currentPipeSpacing*0.9)
+	case '-', '_':
+		// Decrease level if above 0
+		if s.CurrentLevel > 0 {
+			s.CurrentLevel--
+			s.currentPipeSpeed = max(minPipeSpeed, s.currentPipeSpeed/1.2)
+			s.currentPipeGap = min(maxPipeGap, s.currentPipeGap/0.9)
+			s.currentGravity = max(minGravity, s.currentGravity/1.1)
+			s.currentPipeSpacing = min(maxPipeSpacing, s.currentPipeSpacing/0.9)
+		}
 	case ' ':
 		if !s.gameStarted {
 			s.gameStarted = true
