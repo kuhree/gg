@@ -1,9 +1,8 @@
-// Package main implements a retro-style game launcher for the GG game engine.
+// Implements a retro-style game launcher for the GG game engine.
 // It provides a command-line interface to launch various ASCII-based games.
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -50,25 +49,6 @@ type Game struct {
 	Launch      func() error
 }
 
-func getDefaultWorkDir() string {
-	// Follow XDG Base Directory Specification
-	// https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-	dataHome := os.Getenv("XDG_DATA_HOME")
-	if dataHome == "" {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return "./tmp"
-		}
-		dataHome = filepath.Join(homeDir, ".local", "share")
-	}
-	
-	dataDir := filepath.Join(dataHome, "gg")
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		return "./tmp"
-	}
-	return dataDir
-}
-
 func init() {
 	flag.BoolVar(&listGames, "list", false, "List all available games")
 	flag.StringVar(&gameName, "game", "", "Name/Index of the game to launch")
@@ -88,7 +68,7 @@ func main() {
 	if listGames {
 		fmt.Println("Available games:")
 		for i, game := range games {
-			fmt.Printf("%d. %s: %s\n", i+1, game.name, game.description)
+			fmt.Printf("%d. %s: %s\n", i+1, game.Name, game.Description)
 		}
 		os.Exit(0)
 	}
@@ -115,6 +95,25 @@ func main() {
 	} else {
 		showGameMenu()
 	}
+}
+
+// Follow XDG Base Directory Specification
+// https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+func getDefaultWorkDir() string {
+	dataHome := os.Getenv("XDG_DATA_HOME")
+	if dataHome == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return "./tmp"
+		}
+		dataHome = filepath.Join(homeDir, ".local", "share")
+	}
+
+	dataDir := filepath.Join(dataHome, "gg")
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		return "./tmp"
+	}
+	return dataDir
 }
 
 func launchSelectedGame(game Game) {
