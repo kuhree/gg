@@ -21,6 +21,16 @@ type Config struct {
 	MaxNameLength   int
 	BlinkInterval   float64
 	LeaderboardSize int
+
+	// Bird physics
+	BirdGravity   float64
+	BirdJumpForce float64
+	
+	// Pipe settings
+	PipeSpeed     float64
+	PipeGap       float64
+	PipeSpacing   float64
+	MinPipeHeight float64
 }
 
 func NewConfig(workDir string) (*Config, error) {
@@ -35,6 +45,14 @@ func NewConfig(workDir string) (*Config, error) {
 		MaxNameLength:   20,
 		BlinkInterval:   0.5,
 		LeaderboardSize: 5,
+
+		BirdGravity:   20.0,
+		BirdJumpForce: -10.0,
+		
+		PipeSpeed:     15.0,
+		PipeGap:       8.0,
+		PipeSpacing:   20.0,
+		MinPipeHeight: 3.0,
 	}
 
 	err := config.LoadConfig(cfg)
