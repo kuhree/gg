@@ -83,6 +83,11 @@ func main() {
 			utils.Logger.Error("Failed to set log level", "error", err)
 			os.Exit(1)
 		}
+
+		if err := utils.SetLogFile(filepath.Join(getDefaultWorkDir(), "gg.log")); err != nil {
+			utils.Logger.Error("Failed to set log file", "error", err)
+			os.Exit(1)
+		}
 	}
 
 	utils.Logger.Info("Starting GG", "debug", debug)
