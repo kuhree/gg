@@ -439,13 +439,16 @@ func (s *GameOverScene) Enter() {
 func (s *GameOverScene) GetDetails() string {
 	width, height := s.Size()
 	return fmt.Sprintf(
-		"%dW*%dH|L%d|S%d|PS%.1f|PW%.1f|PG%.1f",
+		"%dW*%dH|L%d|S%d|PS%.1f|PW%.1f|PG%.1f|IL%d|GV%.1f|JF%.1f",
 		width, height,
 		s.CurrentLevel,
 		s.Score,
 		s.Config.PipeSpeed,
 		s.Config.PipeWidth,
 		s.Config.PipeGap,
+		s.Config.InitialLives,
+		s.Config.BirdGravity,
+		s.Config.JumpForce,
 	)
 }
 
