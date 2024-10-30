@@ -6,6 +6,7 @@ import (
 
 	"github.com/kuhree/gg/internal/engine/core"
 	"github.com/kuhree/gg/internal/engine/leaderboard"
+	"github.com/kuhree/gg/internal/engine/objects"
 	"github.com/kuhree/gg/internal/engine/render"
 	"github.com/kuhree/gg/internal/engine/scenes"
 	"github.com/kuhree/gg/internal/utils"
@@ -82,12 +83,15 @@ func NewGame(width, height int, workDir string, debug bool, overlay bool) (*Game
 		Overlay:       overlay,
 		Scenes:        scenes,
 		Player: &Player{
-			GameObject: GameObject{
-				Position: Vector2D{X: float64(width) / 2, Y: float64(height) - float64(config.PlayerYOffset)},
-				Speed:    Vector2D{X: config.BasePlayerSpeed, Y: config.BasePlayerSpeed},
-				Health:   config.BasePlayerHealth,
-				Width:    config.BasePlayerSize,
-				Height:   config.BasePlayerSize,
+			Object: Object{
+				GameObject: objects.GameObject{
+					Position: objects.Vector2D{X: float64(width) / 2, Y: float64(height) - float64(config.PlayerYOffset)},
+					Width:    config.BasePlayerSize,
+					Height:   config.BasePlayerSize,
+				},
+
+				Speed:  objects.Vector2D{X: config.BasePlayerSpeed, Y: config.BasePlayerSpeed},
+				Health: config.BasePlayerHealth,
 			},
 
 			Lives: config.BaseLives,

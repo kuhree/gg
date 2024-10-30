@@ -7,6 +7,7 @@ import (
 
 	"github.com/ojrac/opensimplex-go"
 
+	"github.com/kuhree/gg/internal/engine/objects"
 	"github.com/kuhree/gg/internal/engine/render"
 	"github.com/kuhree/gg/internal/utils"
 )
@@ -133,16 +134,16 @@ func (s *PlayingScene) movePlayer(dx, dy int) {
 
 // shoot creates a new projectile from the given position
 // / recoil ??
-func (s *PlayingScene) shoot(source *GameObject) {
-	isFromPlayer := source == &s.Player.GameObject
+func (s *PlayingScene) shoot(source *Object) {
+	isFromPlayer := source == &s.Player.Object
 	position := source.Position
 
 	from := "Alien"
-	speed := Vector2D{X: 0, Y: s.Config.BaseProjectileSpeed * 0.75} // Slightly slower alien projectiles
+	speed := objects.Vector2D{X: 0, Y: s.Config.BaseProjectileSpeed * 0.75} // Slightly slower alien projectiles
 	newY := (position.Y + float64(source.Height)/2) + 0.5
 	if isFromPlayer {
 		from = "Player"
-		speed = Vector2D{X: 0, Y: -s.Config.BaseProjectileSpeed}
+		speed = objects.Vector2D{X: 0, Y: -s.Config.BaseProjectileSpeed}
 		newY = (position.Y - float64(source.Width)/2) - 0.5
 
 		// Handle power-ups for player shooting
@@ -152,13 +153,15 @@ func (s *PlayingScene) shoot(source *GameObject) {
 	}
 
 	projectile := &Projectile{
-		GameObject: GameObject{
-			Position:  Vector2D{X: position.X, Y: newY},
+		Object: Object{
+			GameObject: objects.GameObject{
+				Position: objects.Vector2D{X: position.X, Y: newY},
+				Width:    s.Config.BaseProjectileSize,
+				Height:   s.Config.BaseProjectileSize,
+			},
 			Speed:     speed,
 			Health:    s.Config.BaseProjectileHealth + (source.Health * 0.9),
 			MaxHealth: s.Config.BaseProjectileHealth + (source.Health * 0.9),
-			Width:     s.Config.BaseProjectileSize,
-			Height:    s.Config.BaseProjectileSize,
 		},
 		Source: source,
 	}
@@ -262,7 +265,7 @@ func (s *PlayingScene) updateAliens(dt float64) {
 			if rand.Float64() < alien.shootChance {
 				cooldownRandomFactor := rand.Float64() * s.Config.IntervalRandomFactor
 				alien.shootCooldown = alien.shootInterval * (1 + cooldownRandomFactor)
-				s.shoot(&alien.GameObject)
+				s.shoot(&alien.Object)
 			}
 			alien.shootCooldown = alien.shootInterval
 		}
@@ -292,7 +295,7 @@ func (s *PlayingScene) updateCollisions() {
 	// player/collectable
 	for i := len(s.Collectables) - 1; i >= 0; i-- {
 		collectable := s.Collectables[i]
-		if s.collides(&player.GameObject, &collectable.GameObject) {
+		if s.collides(&player.Object, &collectable.Object) {
 			s.activateCollectable(collectable)
 			s.Collectables[i].Health = 0
 		}
@@ -302,14 +305,14 @@ func (s *PlayingScene) updateCollisions() {
 		alien := s.Aliens[i]
 
 		// check alien/player collisions
-		if alien.Health > 0 && s.collides(&player.GameObject, &alien.GameObject) {
+		if alien.Health > 0 && s.collides(&player.Object, &alien.Object) {
 			s.Player.Health -= alien.Health
 			s.Aliens[i].Health = 0 // kill it, don't wanna "bump" into it 1n times and die
 		}
 
 		// check alien/barrier collisions
 		for j, barrier := range s.Barriers {
-			if barrier.Health > 0 && s.collides(&alien.GameObject, &barrier.GameObject) {
+			if barrier.Health > 0 && s.collides(&alien.Object, &barrier.Object) {
 				s.Barriers[j].Health -= alien.Health
 				s.Aliens[i].Health = 0
 			}
@@ -319,10 +322,10 @@ func (s *PlayingScene) updateCollisions() {
 	// Check all projectile collisions
 	for i := len(s.Projectiles) - 1; i >= 0; i-- {
 		projectile := s.Projectiles[i]
-		isFromPlayer := projectile.Source == &player.GameObject
+		isFromPlayer := projectile.Source == &player.Object
 
 		// projectile/player
-		if !isFromPlayer && projectile.Health > 0 && s.collides(&projectile.GameObject, &player.GameObject) {
+		if !isFromPlayer && projectile.Health > 0 && s.collides(&projectile.Object, &player.Object) {
 			s.Player.Health -= projectile.Health
 			s.Projectiles[i].Health = 0 // kill it w fire NOW
 		}
@@ -330,7 +333,7 @@ func (s *PlayingScene) updateCollisions() {
 		// projectile/alien
 		for j := len(s.Aliens) - 1; j >= 0; j-- {
 			alien := s.Aliens[j]
-			if isFromPlayer && alien.Health > 0 && s.collides(&projectile.GameObject, &alien.GameObject) {
+			if isFromPlayer && alien.Health > 0 && s.collides(&projectile.Object, &alien.Object) {
 				damage := math.Min(projectile.Health, alien.Health)
 				s.Aliens[j].Health -= damage
 				s.Projectiles[i].Health -= damage
@@ -344,7 +347,7 @@ func (s *PlayingScene) updateCollisions() {
 		// projectile/barrier
 		for j := len(s.Barriers) - 1; j >= 0; j-- {
 			barrier := s.Barriers[j]
-			if !isFromPlayer && barrier.Health > 0 && s.collides(&projectile.GameObject, &barrier.GameObject) {
+			if !isFromPlayer && barrier.Health > 0 && s.collides(&projectile.Object, &barrier.Object) {
 				damage := math.Min(projectile.Health, barrier.Health)
 				s.Barriers[j].Health -= damage
 				s.Projectiles[i].Health -= damage
@@ -354,9 +357,9 @@ func (s *PlayingScene) updateCollisions() {
 		// projectile/projectile
 		for j := i + 1; j < len(s.Projectiles); j++ {
 			proj := s.Projectiles[j]
-			isFromPlayerInner := proj.Source == &player.GameObject
+			isFromPlayerInner := proj.Source == &player.Object
 
-			if isFromPlayer != isFromPlayerInner && proj.Health > 0 && s.collides(&projectile.GameObject, &proj.GameObject) {
+			if isFromPlayer != isFromPlayerInner && proj.Health > 0 && s.collides(&projectile.Object, &proj.Object) {
 				damage := math.Min(projectile.Health, proj.Health)
 				s.Projectiles[i].Health -= damage
 				s.Projectiles[j].Health -= damage
@@ -366,7 +369,7 @@ func (s *PlayingScene) updateCollisions() {
 }
 
 // collides checks if two GameObjects are colliding
-func (s *PlayingScene) collides(obj1, obj2 *GameObject) bool {
+func (s *PlayingScene) collides(obj1, obj2 *Object) bool {
 	// Calculate the edges of each object
 	left1 := obj1.Position.X - obj1.Width/2
 	right1 := obj1.Position.X + obj1.Width/2
@@ -499,7 +502,7 @@ func (s *PlayingScene) difficulty() float64 {
 
 func (s *PlayingScene) setupLevelPlayer(difficultyMultiplier float64) {
 	width, height := s.Size()
-	s.Player.Position = Vector2D{X: float64(width) / 2, Y: float64(height - s.Config.PlayerYOffset)}
+	s.Player.Position = objects.Vector2D{X: float64(width) / 2, Y: float64(height - s.Config.PlayerYOffset)}
 
 	// Linear increase for health with a cap
 	healthIncrease := s.Config.BasePlayerHealth * 0.05 * difficultyMultiplier
@@ -553,10 +556,12 @@ func (s *PlayingScene) generateAliens(count int, difficultyMultiplier float64) [
 		attributes := alienTypes[alienType]
 		health := attributes.Health * difficultyMultiplier
 		alien := &Alien{
-			GameObject: GameObject{
-				Speed:     Vector2D{X: attributes.Speed * difficultyMultiplier, Y: 0},
-				Width:     float64(attributes.Size),
-				Height:    float64(attributes.Size),
+			Object: Object{
+				GameObject: objects.GameObject{
+					Width:  float64(attributes.Size),
+					Height: float64(attributes.Size),
+				},
+				Speed:     objects.Vector2D{X: attributes.Speed * difficultyMultiplier, Y: 0},
 				Health:    health,
 				MaxHealth: health,
 			},
@@ -571,9 +576,9 @@ func (s *PlayingScene) generateAliens(count int, difficultyMultiplier float64) [
 	return aliens
 }
 
-func (s *PlayingScene) generateAlienPositions(aliens []*Alien, width, height int) []Vector2D {
+func (s *PlayingScene) generateAlienPositions(aliens []*Alien, width, height int) []objects.Vector2D {
 	noise := opensimplex.NewNormalized(int64(s.CurrentLevel))
-	positions := make([]Vector2D, 0, len(aliens))
+	positions := make([]objects.Vector2D, 0, len(aliens))
 
 	topMargin := s.Config.AlienYOffset
 	bottomMargin := s.Config.BarrierYOffset
@@ -610,7 +615,7 @@ func (s *PlayingScene) generateAlienPositions(aliens []*Alien, width, height int
 			}
 
 			if !overlap {
-				positions = append(positions, Vector2D{X: x, Y: y})
+				positions = append(positions, objects.Vector2D{X: x, Y: y})
 			}
 		}
 
@@ -629,13 +634,15 @@ func (s *PlayingScene) spawnCollectables() {
 	c := collectableTypes[collectableType]
 
 	collectable := &Collectable{
-		GameObject: GameObject{
-			Position: Vector2D{
-				X: rand.Float64() * float64(width),
-				Y: 0,
+		Object: Object{
+			GameObject: objects.GameObject{
+				Position: objects.Vector2D{
+					X: rand.Float64() * float64(width),
+					Y: 0,
+				},
+				Width:  s.Config.BaseProjectileSize,
+				Height: s.Config.BaseProjectileSize,
 			},
-			Width:  s.Config.BaseProjectileSize,
-			Height: s.Config.BaseProjectileSize,
 			Health: 1, // so it doesn't get cleaned up
 		},
 		CollectableType: c.Type,
@@ -677,16 +684,18 @@ func (s *PlayingScene) setupLevelBarriers(difficultyMultiplier float64) {
 			health := s.Config.BaseBarrierHealth * (1 + 0.1*math.Log1p(difficultyMultiplier))
 
 			barrier := &Barrier{
-				GameObject: GameObject{
-					Position: Vector2D{
-						X: float64(i+1) * (float64(width) / (float64(barrierCount) + 1)),
-						Y: float64(height - s.Config.BarrierYOffset),
+				Object: Object{
+					GameObject: objects.GameObject{
+						Position: objects.Vector2D{
+							X: float64(i+1) * (float64(width) / (float64(barrierCount) + 1)),
+							Y: float64(height - s.Config.BarrierYOffset),
+						},
+						Width:  s.Config.BaseBarrierSize * 2,
+						Height: s.Config.BaseBarrierSize,
 					},
-					Speed:     Vector2D{},
+					Speed:     objects.Vector2D{},
 					Health:    health,
 					MaxHealth: health,
-					Width:     s.Config.BaseBarrierSize * 2,
-					Height:    s.Config.BaseBarrierSize,
 				},
 				RegenerationRate: s.Config.BaseBarrierRegenerationRate * difficultyMultiplier,
 			}
@@ -802,7 +811,7 @@ func (s *PlayingScene) getProjectileInfo(proj *Projectile) (rune, render.Color) 
 	var char rune
 	var color render.Color
 
-	isFromPlayer := proj.Source == &s.Player.GameObject
+	isFromPlayer := proj.Source == &s.Player.Object
 
 	powerRatio := proj.Health / s.Player.Health
 	switch {

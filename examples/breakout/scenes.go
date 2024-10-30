@@ -6,6 +6,7 @@ import (
 
 	"github.com/kuhree/gg/internal/engine/core"
 	"github.com/kuhree/gg/internal/engine/leaderboard"
+	"github.com/kuhree/gg/internal/engine/objects"
 	"github.com/kuhree/gg/internal/engine/render"
 )
 
@@ -100,8 +101,8 @@ func NewPlayingScene(game *Game) *PlayingScene {
 
 	// Initialize paddle
 	scene.paddle = &Paddle{
-		GameObject: GameObject{
-			Position: Vector2D{
+		GameObject: objects.GameObject{
+			Position: objects.Vector2D{
 				X: float64(game.Width) / 2,
 				Y: float64(game.Height) - 2,
 			},
@@ -113,15 +114,15 @@ func NewPlayingScene(game *Game) *PlayingScene {
 
 	// Initialize ball
 	scene.ball = &Ball{
-		GameObject: GameObject{
-			Position: Vector2D{
+		GameObject: objects.GameObject{
+			Position: objects.Vector2D{
 				X: scene.paddle.Position.X + scene.paddle.Width/2,
 				Y: scene.paddle.Position.Y - game.Config.BallSize,
 			},
 			Width:  game.Config.BallSize,
 			Height: game.Config.BallSize,
 		},
-		Velocity: Vector2D{X: 0, Y: 0},
+		Velocity: objects.Vector2D{X: 0, Y: 0},
 		Attached: true,
 	}
 
@@ -265,7 +266,7 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 	case ' ': // Spacebar launches the ball
 		if s.ball.Attached {
 			s.ball.Attached = false
-			s.ball.Velocity = Vector2D{X: s.Config.BallVelocityX, Y: s.Config.BallVelocityY}
+			s.ball.Velocity = objects.Vector2D{X: s.Config.BallVelocityX, Y: s.Config.BallVelocityY}
 		}
 	}
 
@@ -404,7 +405,7 @@ func (s *PlayingScene) resetBall() {
 	s.ball.Attached = true
 	s.ball.Position.X = s.paddle.Position.X + s.paddle.Width/2
 	s.ball.Position.Y = s.paddle.Position.Y - s.Config.BallSize
-	s.ball.Velocity = Vector2D{X: 0, Y: 0}
+	s.ball.Velocity = objects.Vector2D{X: 0, Y: 0}
 }
 
 func (s *PlayingScene) initializeBricks() {
@@ -430,8 +431,8 @@ func (s *PlayingScene) initializeBricks() {
 			x := float64(col) * brickWidth
 
 			brick := &Brick{
-				GameObject: GameObject{
-					Position: Vector2D{X: x, Y: y},
+				GameObject: objects.GameObject{
+					Position: objects.Vector2D{X: x, Y: y},
 					Width:    brickWidth - 1,
 					Height:   brickHeight,
 				},

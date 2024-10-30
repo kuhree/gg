@@ -190,7 +190,7 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 		playerColor,
 	)
 
-	s.drawObjOverlay(&player.GameObject, playerColor, OverlayOpts{})
+	s.drawObjOverlay(&player.Object, playerColor, OverlayOpts{})
 
 	// Draw collectibles
 	for _, collectable := range s.Collectables {
@@ -227,7 +227,7 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 			color,
 		)
 
-		s.drawObjOverlay(&alien.GameObject, color, OverlayOpts{})
+		s.drawObjOverlay(&alien.Object, color, OverlayOpts{})
 	}
 
 	// Draw projectiles
@@ -242,7 +242,7 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 			color,
 		)
 
-		s.drawObjOverlay(&projectile.GameObject, render.ColorWhite, OverlayOpts{})
+		s.drawObjOverlay(&projectile.Object, render.ColorWhite, OverlayOpts{})
 	}
 
 	// Draw barriers
@@ -258,7 +258,7 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 			color,
 		)
 
-		s.drawObjOverlay(&barrier.GameObject, render.ColorWhite, OverlayOpts{Health: true})
+		s.drawObjOverlay(&barrier.Object, render.ColorWhite, OverlayOpts{Health: true})
 	}
 
 	// Draw score, level, lives...
@@ -284,7 +284,7 @@ type OverlayOpts struct {
 	Health bool
 }
 
-func (s *PlayingScene) drawObjOverlay(obj *GameObject, color render.Color, opts OverlayOpts) {
+func (s *PlayingScene) drawObjOverlay(obj *Object, color render.Color, opts OverlayOpts) {
 	_, healthColor := s.getHealthInfo(obj.Health, obj.MaxHealth)
 
 	if s.Overlay || opts.Health {
@@ -334,7 +334,7 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 	case 'd', 'D':
 		s.movePlayer(2, 0)
 	case core.KeySpace:
-		s.shoot(&s.Player.GameObject)
+		s.shoot(&s.Player.Object)
 	case '_':
 		s.CurrentLevel -= s.Config.BaseLevelStep
 		s.startWave()

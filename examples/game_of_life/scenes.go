@@ -7,6 +7,7 @@ import (
 
 	"github.com/kuhree/gg/internal/engine/core"
 	"github.com/kuhree/gg/internal/engine/leaderboard"
+	"github.com/kuhree/gg/internal/engine/objects"
 	"github.com/kuhree/gg/internal/engine/render"
 )
 
@@ -56,8 +57,8 @@ type MainMenuScene struct {
 // PlayingScene represents the main gameplay
 type PlayingScene struct {
 	BaseScene
-	cells              map[Vector2D]Cell
-	playerPos          Vector2D
+	cells              map[objects.Vector2D]Cell
+	playerPos          objects.Vector2D
 	prevLiveCellCount  int
 	liveCellCount      int
 	stableGenerations  int
@@ -92,7 +93,7 @@ func NewMainMenuScene(game *Game) *MainMenuScene {
 // NewPlayingScene creates a new playing scene
 func NewPlayingScene(game *Game) *PlayingScene {
 	width, height := game.Size()
-	playerPos := Vector2D{
+	playerPos := objects.Vector2D{
 		// X: float64(width) / 2,
 		// Y: float64(height) / 2,
 		X: 1,
@@ -108,7 +109,7 @@ func NewPlayingScene(game *Game) *PlayingScene {
 		},
 
 		playerPos:          playerPos,
-		cells:              make(map[Vector2D]Cell, height*width),
+		cells:              make(map[objects.Vector2D]Cell, height*width),
 		prevLiveCellCount:  0,
 		liveCellCount:      0,
 		stableGenerations:  0,
@@ -203,7 +204,7 @@ func (s *PlayingScene) Draw(renderer *render.Renderer) {
 			neighbors := s.countNeighbors(x, y)
 			char, color := s.getCellInfo(float64(neighbors), float64(s.Config.BaseNeighboars))
 
-			pos := Vector2D{X: float64(x), Y: float64(y)}
+			pos := objects.Vector2D{X: float64(x), Y: float64(y)}
 			isInfluenced := contains(influencedCells, pos)
 
 			if c.Alive {
@@ -263,13 +264,13 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 // PlayingScene helpers
 
 func (s *PlayingScene) getOrCreateCell(x, y int) *Cell {
-	pos := Vector2D{X: float64(x), Y: float64(y)}
+	pos := objects.Vector2D{X: float64(x), Y: float64(y)}
 	if cell, exists := s.cells[pos]; exists {
 		return &cell
 	}
 
 	newCell := Cell{
-		GameObject: GameObject{
+		GameObject: objects.GameObject{
 			Position: pos,
 			Width:    float64(s.Config.BaseSize),
 			Height:   float64(s.Config.BaseSize),
@@ -284,18 +285,18 @@ func (s *PlayingScene) getOrCreateCell(x, y int) *Cell {
 func (s *PlayingScene) updateCollisions(_ float64) {
 	width, height := s.Size()
 
-	newCells := make(map[Vector2D]Cell)
+	newCells := make(map[objects.Vector2D]Cell)
 
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			pos := Vector2D{X: float64(x), Y: float64(y)}
+			pos := objects.Vector2D{X: float64(x), Y: float64(y)}
 			neighbors := s.countNeighbors(x, y)
 			cell := s.getOrCreateCell(x, y)
 
 			if cell.Alive && (neighbors < 2 || neighbors > 3) {
-				newCells[pos] = Cell{Alive: false, GameObject: GameObject{Position: pos}}
+				newCells[pos] = Cell{Alive: false, GameObject: objects.GameObject{Position: pos}}
 			} else if !cell.Alive && neighbors == 3 {
-				newCells[pos] = Cell{Alive: true, GameObject: GameObject{Position: pos}}
+				newCells[pos] = Cell{Alive: true, GameObject: objects.GameObject{Position: pos}}
 			} else {
 				newCells[pos] = *cell
 			}
@@ -330,7 +331,7 @@ func (s *PlayingScene) countNeighbors(x, y int) int {
 			}
 
 			neighborX, neighborY := x+i, y+j
-			pos := Vector2D{X: float64(neighborX), Y: float64(neighborY)}
+			pos := objects.Vector2D{X: float64(neighborX), Y: float64(neighborY)}
 			if cell, exists := s.cells[pos]; exists && cell.Alive {
 				count++
 			}
@@ -350,7 +351,7 @@ func (s *PlayingScene) checkGameState() {
 
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			pos := Vector2D{X: float64(x), Y: float64(y)}
+			pos := objects.Vector2D{X: float64(x), Y: float64(y)}
 			if cell, exists := s.cells[pos]; exists && cell.Alive {
 				liveCells++
 			}
@@ -414,7 +415,7 @@ func (s *PlayingScene) calculateBoardHash() uint64 {
 	return hash
 }
 
-func contains(slice []Vector2D, item Vector2D) bool {
+func contains(slice []objects.Vector2D, item objects.Vector2D) bool {
 	for _, v := range slice {
 		if v == item {
 			return true
@@ -447,8 +448,8 @@ func (s *PlayingScene) getCellInfo(neighbors float64, maxNeighbors float64) (run
 }
 
 // getPlayerInfluencedCells returns a list of cell positions influenced by the player
-func (s *PlayingScene) getPlayerInfluencedCells() []Vector2D {
-	influencedCells := make([]Vector2D, 0)
+func (s *PlayingScene) getPlayerInfluencedCells() []objects.Vector2D {
+	influencedCells := make([]objects.Vector2D, 0)
 	width, height := s.Size()
 	radius := s.Config.BaseRadius
 	buffer := s.Config.BaseRadius * s.Config.SeedBuffer
@@ -459,7 +460,7 @@ func (s *PlayingScene) getPlayerInfluencedCells() []Vector2D {
 			distX := math.Abs(float64(x) - float64(playerX))
 			distY := math.Abs(float64(y) - float64(playerY))
 			if distX <= radius+buffer && distY <= radius+buffer {
-				influencedCells = append(influencedCells, Vector2D{X: float64(x), Y: float64(y)})
+				influencedCells = append(influencedCells, objects.Vector2D{X: float64(x), Y: float64(y)})
 			}
 		}
 	}
