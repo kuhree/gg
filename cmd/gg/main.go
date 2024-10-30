@@ -15,6 +15,7 @@ import (
 	"github.com/kuhree/gg/examples/flappybird"
 	"github.com/kuhree/gg/examples/frames"
 	"github.com/kuhree/gg/examples/gameoflife"
+	"github.com/kuhree/gg/examples/sorts"
 	"github.com/kuhree/gg/examples/spaceinvaders"
 	"github.com/kuhree/gg/internal/engine/core"
 	"github.com/kuhree/gg/internal/utils"
@@ -266,6 +267,24 @@ var games = []Game{
 		"Modern classic - navigate through pipes with precise timing in this challenging side-scroller",
 		func() error {
 			game, err := flappybird.NewGame(width, height, workDir, debug, overlay)
+			if err != nil {
+				return err
+			}
+
+			gl := core.NewGameLoop(game)
+			if err := gl.Run(time, fps); err != nil {
+				return err
+			}
+			defer gl.Stop()
+
+			return nil
+		},
+	},
+	{
+		"Sorts",
+		"Visualization of various sorting algorithms including Quick Sort, Bubble Sort, and Merge Sort",
+		func() error {
+			game, err := sorts.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
 				return err
 			}
