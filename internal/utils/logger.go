@@ -75,24 +75,19 @@ func SetupLogger(config LogConfig) error {
 	return nil
 }
 
+// currentConfig tracks the active configuration
+var currentConfig = defaultConfig
+
 // SetLogLevel sets the log level for the logger
 func SetLogLevel(level slog.Level) error {
-	return SetupLogger(LogConfig{
-		LogFile:     defaultConfig.LogFile,
-		MaxSize:     defaultConfig.MaxSize,
-		LogToStdout: defaultConfig.LogToStdout,
-		Level:       level,
-	})
+	currentConfig.Level = level
+	return SetupLogger(currentConfig)
 }
 
 // SetLogFile changes the log file path
 func SetLogFile(filepath string) error {
-	return SetupLogger(LogConfig{
-		LogFile:     filepath,
-		MaxSize:     defaultConfig.MaxSize,
-		LogToStdout: defaultConfig.LogToStdout,
-		Level:       defaultConfig.Level,
-	})
+	currentConfig.LogFile = filepath
+	return SetupLogger(currentConfig)
 }
 
 // Cleanup closes the log file
