@@ -2,6 +2,7 @@ package flappybird
 
 import (
 	"fmt"
+	"math/rand/v2"
 
 	"github.com/kuhree/gg/internal/engine/core"
 	"github.com/kuhree/gg/internal/engine/leaderboard"
@@ -55,7 +56,12 @@ type MainMenuScene struct {
 type PlayingScene struct {
 	BaseScene
 
-	lives  int
+	lives int
+	bird  *Bird
+	pipes []*Pipe
+
+	pipeTimer   float64
+	gameStarted bool
 }
 
 // PauseMenuScene represents the pause menu
@@ -92,6 +98,7 @@ func NewPlayingScene(game *Game) *PlayingScene {
 			showOnBlink:   true,
 		},
 		lives: game.Config.InitialLives,
+		pipes: make([]*Pipe, 0),
 	}
 
 	return scene
@@ -161,8 +168,41 @@ func (s *MainMenuScene) HandleInput(input core.InputEvent) error {
 }
 
 // PlayingScene methods
+
 func (s *PlayingScene) Update(dt float64) {
 	s.BaseScene.Update(dt)
+
+	if !s.gameStarted {
+		// Initialize bird in center when game starts
+		if s.bird == nil {
+			s.bird = NewBird(float64(s.Width)/3, float64(s.Height)/2, s.Config)
+		}
+		return
+	}
+
+	// Update bird physics
+	s.bird.Velocity += s.bird.Gravity * dt
+	s.bird.Position.Y += s.bird.Velocity * dt
+
+	// Update pipes
+	s.pipeTimer += dt
+	if s.pipeTimer >= s.Config.PipeSpacing/s.Config.PipeSpeed {
+		s.pipeTimer = 0
+		s.spawnPipes()
+	}
+
+	for _, pipe := range s.pipes {
+		pipe.Position.X -= s.Config.PipeSpeed * dt
+	}
+
+	// Remove off-screen pipes
+	newPipes := make([]*Pipe, 0)
+	for _, pipe := range s.pipes {
+		if pipe.Position.X > -pipe.Width {
+			newPipes = append(newPipes, pipe)
+		}
+	}
+	s.pipes = newPipes
 
 	s.updateCollisions(dt)
 	ended, reason := s.checkGameState(dt)
@@ -171,11 +211,62 @@ func (s *PlayingScene) Update(dt float64) {
 	}
 }
 
+func (s *PlayingScene) spawnPipes() {
+	gapY := float64(s.Height/2) + (rand.Float64()-0.5)*float64(s.Height/4)
+
+	upperHeight := gapY - s.Config.PipeGap/2
+	lowerHeight := float64(s.Height) - (gapY + s.Config.PipeGap/2)
+
+	if upperHeight < s.Config.MinPipeHeight {
+		upperHeight = s.Config.MinPipeHeight
+	}
+	if lowerHeight < s.Config.MinPipeHeight {
+		lowerHeight = s.Config.MinPipeHeight
+	}
+
+	s.pipes = append(s.pipes,
+		NewPipe(float64(s.Width), 0, upperHeight, true),
+		NewPipe(float64(s.Width), gapY+s.Config.PipeGap/2, lowerHeight, false),
+	)
+}
+
 func (s *PlayingScene) Draw(renderer *render.Renderer) {
-	// Draw score, level, lives
+	// Draw score and lives
 	_ = renderer.DrawText(fmt.Sprintf("Score: %d", s.Score), 1, 1, render.ColorWhite)
-	_ = renderer.DrawText(fmt.Sprintf("Level: %d", s.CurrentLevel), 1, 2, render.ColorWhite)
 	_ = renderer.DrawText(fmt.Sprintf("Lives: %d", s.lives), s.Width-10, 1, render.ColorWhite)
+
+	// Draw start message
+	if !s.gameStarted {
+		msg := "Press SPACE to start!"
+		x := (s.Width - len(msg)) / 2
+		y := s.Height / 2
+		_ = renderer.DrawText(msg, x, y, render.ColorBrightMagenta)
+	}
+
+	// Draw bird
+	if s.bird != nil {
+		_ = renderer.DrawChar(s.bird.Character, int(s.bird.Position.X), int(s.bird.Position.Y), s.bird.Color)
+		s.drawObjOverlay(int(s.bird.Position.X), int(s.bird.Position.Y), render.ColorWhite)
+	}
+
+	// Draw pipes
+	for _, pipe := range s.pipes {
+		pipeX := int(pipe.Position.X)
+		if pipe.IsUpperPipe {
+			for y := 0; y < int(pipe.Height); y++ {
+				_ = renderer.DrawChar('|', pipeX, y, pipe.Color)
+				_ = renderer.DrawChar('|', pipeX+1, y, pipe.Color)
+			}
+		} else {
+			startY := int(pipe.Position.Y)
+			for y := startY; y < startY+int(pipe.Height); y++ {
+				_ = renderer.DrawChar('|', pipeX, y, pipe.Color)
+				_ = renderer.DrawChar('|', pipeX+1, y, pipe.Color)
+			}
+		}
+
+		s.drawObjOverlay(int(pipeX), int(pipe.Position.Y), render.ColorWhite)
+	}
 }
 
 func (s *PlayingScene) HandleInput(input core.InputEvent) error {
@@ -188,9 +279,13 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 		s.Scenes.ChangeScene(PauseMenuSceneID)
 	case 'q', 'Q':
 		s.Scenes.ChangeScene(GameOverSceneID)
-	case 'a', 'A':
-	case 'd', 'D':
-	case ' ': 
+	case ' ':
+		if !s.gameStarted {
+			s.gameStarted = true
+		}
+		if s.bird != nil && !s.bird.IsDead {
+			s.bird.Velocity = s.bird.JumpForce
+		}
 	}
 
 	return nil
@@ -200,24 +295,57 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 
 // updateCollisions detects and handles collisions between game objects
 func (s *PlayingScene) updateCollisions(_ float64) {
+	if s.bird == nil || !s.gameStarted {
+		return
+	}
+
+	// Check floor/ceiling collisions
+	if s.bird.Position.Y < 0 || s.bird.Position.Y >= float64(s.Height) {
+		s.bird.IsDead = true
+		return
+	}
+
+	// Check pipe collisions
+	birdX := int(s.bird.Position.X)
+	birdY := int(s.bird.Position.Y)
+
+	for _, pipe := range s.pipes {
+		pipeX := int(pipe.Position.X)
+
+		// Only check pipes the bird is passing through
+		if birdX >= pipeX && birdX <= pipeX+int(pipe.Width) {
+			if pipe.IsUpperPipe {
+				if birdY < int(pipe.Height) {
+					s.bird.IsDead = true
+					return
+				}
+			} else {
+				if birdY >= int(pipe.Position.Y) {
+					s.bird.IsDead = true
+					return
+				}
+			}
+		}
+
+		// Score point when passing pipe
+		if birdX == pipeX+int(pipe.Width) && !pipe.IsUpperPipe {
+			s.Score++
+		}
+	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 // checkGameState determines if the game should end
 func (s *PlayingScene) checkGameState(_ float64) (bool, string) {
-	if s.lives <= 0 {
-		return true, "Out of lives"
+	if s.bird != nil && s.bird.IsDead {
+		s.lives--
+		if s.lives <= 0 {
+			return true, "Out of lives"
+		}
+
+		// Reset for next life
+		s.bird = nil
+		s.pipes = make([]*Pipe, 0)
+		s.gameStarted = false
 	}
 
 	return false, ""
@@ -241,7 +369,7 @@ func (s *PlayingScene) drawObjOverlay(x, y int, color render.Color) {
 	if s.Debug {
 		debugInfo := []string{
 			fmt.Sprintf("Pos: (%.1f,%.1f)", float64(x), float64(y)),
-			fmt.Sprintf("Col: %d", color),
+			fmt.Sprintf("Color: %d", color),
 		}
 
 		for i, info := range debugInfo {
