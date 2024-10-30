@@ -120,7 +120,7 @@ func (s *VisualizerScene) Update(dt float64) {
 		
 		if s.updateTimer >= s.Config.UpdateInterval {
 			s.updateTimer = 0
-			s.SortComplete = s.CurrentSorter.Step(s.CurrentArray)
+			s.SortComplete = s.CurrentSorter.Step(s.CurrentArray, s.Game)
 		}
 	}
 }
