@@ -331,9 +331,10 @@ func (s *PlayingScene) updateCollisions(_ float64) {
 			}
 		}
 
-		// Score point when passing pipe
-		if birdX == pipeX+int(pipe.Width) && !pipe.IsUpperPipe {
+		// Score point when passing pipe (only count lower pipe to avoid double scoring)
+		if birdX == pipeX+int(pipe.Width) && !pipe.IsUpperPipe && !pipe.Scored {
 			s.Score++
+			pipe.Scored = true
 		}
 	}
 }
