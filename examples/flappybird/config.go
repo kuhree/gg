@@ -42,7 +42,7 @@ func NewConfig(workDir string) (*Config, error) {
 		ScoreOffset:     1.0 / 6,
 		ControlsOffset:  2.0 / 8,
 
-		InitialLives:    3,
+		InitialLives:    1,
 		MaxNameLength:   20,
 		BlinkInterval:   0.5,
 		LeaderboardSize: 5,

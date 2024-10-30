@@ -252,15 +252,16 @@ func (s *PlayingScene) spawnPipes() {
 }
 
 func (s *PlayingScene) Draw(renderer *render.Renderer) {
-	// Draw score and lives
+	// Draw score, lives and debug info
 	_ = renderer.DrawText(fmt.Sprintf("Score: %d", s.Score), 1, 1, render.ColorWhite)
 	_ = renderer.DrawText(fmt.Sprintf("Lives: %d", s.lives), 1, 2, render.ColorWhite)
-
+	_ = renderer.DrawText(fmt.Sprintf("Level: %d", s.CurrentLevel), 1, 3, render.ColorWhite)
 	if s.Debug {
-		_ = renderer.DrawText(fmt.Sprintf("Level: %d", s.CurrentLevel), 1, 3, render.ColorWhite)
-		_ = renderer.DrawText(fmt.Sprintf("Pipe Speed: %.1f", s.currentPipeSpeed), 1, 4, render.ColorWhite)
-		_ = renderer.DrawText(fmt.Sprintf("Pipe Gap: %.1f", s.currentPipeGap), 1, 5, render.ColorWhite)
-		_ = renderer.DrawText(fmt.Sprintf("Pipe Spacing: %.1f", s.currentPipeSpacing), 1, 6, render.ColorWhite)
+		_ = renderer.DrawText("Difficulty:", 1, 5, render.ColorBrightBlue)
+		_ = renderer.DrawText(fmt.Sprintf("Speed: %.1f", s.currentPipeSpeed), 1, 6, render.ColorWhite)
+		_ = renderer.DrawText(fmt.Sprintf("Gap: %.1f", s.currentPipeGap), 1, 7, render.ColorWhite)
+		_ = renderer.DrawText(fmt.Sprintf("Spacing: %.1f", s.currentPipeSpacing), 1, 8, render.ColorWhite)
+		_ = renderer.DrawText(fmt.Sprintf("Gravity: %.1f", s.currentGravity), 1, 9, render.ColorWhite)
 	}
 
 	// Draw start message
@@ -405,19 +406,7 @@ func (s *PlayingScene) drawObjOverlay(x, y int, color render.Color) {
 	}
 
 	if s.Overlay {
-		// Draw hitbox markers at corners
-		markers := []struct {
-			char   rune
-			dx, dy int
-		}{
-			{'┌', -1, -1}, {'┐', 1, -1}, // Top corners
-			{'└', -1, 1}, {'┘', 1, 1}, // Bottom corners
-		}
-		for _, m := range markers {
-			_ = s.Renderer.DrawChar(m.char, x+m.dx, y+m.dy, color)
-		}
-		// Center marker
-		_ = s.Renderer.DrawChar('╋', x, y, color)
+		_ = s.Renderer.DrawChar(render.FullBlock, x, y, color)
 	}
 
 	if s.Debug {
@@ -457,18 +446,6 @@ func (s *PlayingScene) drawObjOverlay(x, y int, color render.Color) {
 			}
 		}
 
-		// Add difficulty info when debugging bird or pipes
-		if (s.bird != nil && x == int(s.bird.Position.X)) || 
-		   (len(s.pipes) > 0 && x == int(s.pipes[0].Position.X)) {
-			debugInfo = append(debugInfo,
-				("┌─ Difficulty ─────────┐"),
-				fmt.Sprintf("│ Speed:    %-10.1f│", s.currentPipeSpeed),
-				fmt.Sprintf("│ Gap:      %-10.1f│", s.currentPipeGap),
-				fmt.Sprintf("│ Spacing:  %-10.1f│", s.currentPipeSpacing),
-				fmt.Sprintf("│ Gravity:  %-10.1f│", s.currentGravity),
-				("└────────────────────┘"),
-			)
-		}
 
 		// Draw debug info offset to the right
 		for i, info := range debugInfo {
