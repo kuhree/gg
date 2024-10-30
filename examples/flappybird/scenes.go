@@ -335,6 +335,14 @@ func (s *PlayingScene) updateCollisions(_ float64) {
 		if birdX == pipeX+int(pipe.Width) && !pipe.IsUpperPipe && !pipe.Scored {
 			s.Score++
 			pipe.Scored = true
+			
+			// Increase difficulty every 5 points
+			if s.Score%5 == 0 {
+				s.Config.PipeSpeed *= 1.2    // Increase pipe speed by 20%
+				s.Config.PipeGap *= 0.9      // Decrease gap by 10%
+				s.Config.BirdGravity *= 1.1  // Increase gravity by 10%
+				s.CurrentLevel++             // Track difficulty level
+			}
 		}
 	}
 }
