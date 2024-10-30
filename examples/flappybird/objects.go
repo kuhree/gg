@@ -21,6 +21,7 @@ type Pipe struct {
 	objects.GameObject
 	Color       render.Color
 	IsUpperPipe bool
+	Scored bool
 }
 
 // NewBird creates a new bird instance
@@ -50,6 +51,7 @@ func NewPipe(x, y float64, height float64, width float64, isUpper bool) *Pipe {
 		},
 		Color:       render.ColorGreen,
 		IsUpperPipe: isUpper,
+		Scored: false,
 	}
 }
 
