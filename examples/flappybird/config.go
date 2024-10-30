@@ -51,8 +51,8 @@ func NewConfig(workDir string) (*Config, error) {
 		BirdJumpForce: -10.0,
 		
 		PipeSpeed:     15.0,
-		PipeGap:       8.0,
-		PipeSpacing:   20.0,
+		PipeGap:       10.0,
+		PipeSpacing:   50.0,
 		MinPipeHeight: 3.0,
 		PipeWidth:     2.0,
 	}

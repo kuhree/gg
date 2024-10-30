@@ -62,6 +62,11 @@ type PlayingScene struct {
 
 	pipeTimer   float64
 	gameStarted bool
+
+	// Current difficulty settings
+	currentPipeSpeed float64
+	currentPipeGap   float64
+	currentGravity   float64
 }
 
 // PauseMenuScene represents the pause menu
@@ -97,8 +102,11 @@ func NewPlayingScene(game *Game) *PlayingScene {
 			blinkInterval: 0.5,
 			showOnBlink:   true,
 		},
-		lives: game.Config.InitialLives,
-		pipes: make([]*Pipe, 0),
+		lives:            game.Config.InitialLives,
+		pipes:            make([]*Pipe, 0),
+		currentPipeSpeed: game.Config.PipeSpeed,
+		currentPipeGap:   game.Config.PipeGap,
+		currentGravity:   game.Config.BirdGravity,
 	}
 
 	return scene
@@ -176,6 +184,7 @@ func (s *PlayingScene) Update(dt float64) {
 		// Initialize bird in center when game starts
 		if s.bird == nil {
 			s.bird = NewBird(float64(s.Width)/3, float64(s.Height)/2, s.Config)
+			s.bird.Gravity = s.currentGravity
 		}
 		return
 	}
@@ -186,13 +195,13 @@ func (s *PlayingScene) Update(dt float64) {
 
 	// Update pipes
 	s.pipeTimer += dt
-	if s.pipeTimer >= s.Config.PipeSpacing/s.Config.PipeSpeed {
+	if s.pipeTimer >= s.Config.PipeSpacing/s.currentPipeSpeed {
 		s.pipeTimer = 0
 		s.spawnPipes()
 	}
 
 	for _, pipe := range s.pipes {
-		pipe.Position.X -= s.Config.PipeSpeed * dt
+		pipe.Position.X -= s.currentPipeSpeed * dt
 	}
 
 	// Remove off-screen pipes
@@ -214,8 +223,8 @@ func (s *PlayingScene) Update(dt float64) {
 func (s *PlayingScene) spawnPipes() {
 	gapY := float64(s.Height/2) + (rand.Float64()-0.5)*float64(s.Height/4)
 
-	upperHeight := gapY - s.Config.PipeGap/2
-	lowerHeight := float64(s.Height) - (gapY + s.Config.PipeGap/2)
+	upperHeight := gapY - s.currentPipeGap/2
+	lowerHeight := float64(s.Height) - (gapY + s.currentPipeGap/2)
 
 	if upperHeight < s.Config.MinPipeHeight {
 		upperHeight = s.Config.MinPipeHeight
@@ -338,10 +347,10 @@ func (s *PlayingScene) updateCollisions(_ float64) {
 			
 			// Increase difficulty every 5 points
 			if s.Score%5 == 0 {
-				s.Config.PipeSpeed *= 1.2    // Increase pipe speed by 20%
-				s.Config.PipeGap *= 0.9      // Decrease gap by 10%
-				s.Config.BirdGravity *= 1.1  // Increase gravity by 10%
-				s.CurrentLevel++             // Track difficulty level
+				s.currentPipeSpeed *= 1.2  // Increase pipe speed by 20%
+				s.currentPipeGap *= 0.9    // Decrease gap by 10%
+				s.currentGravity *= 1.1    // Increase gravity by 10%
+				s.CurrentLevel++           // Track difficulty level
 			}
 		}
 	}
@@ -447,7 +456,7 @@ func (s *GameOverScene) Enter() {
 func (s *GameOverScene) GetDetails() string {
 	width, height := s.Size()
 	return fmt.Sprintf(
-		"%dW*%dH|L%d|S%d|PS%.1f|PW%.1f|PG%.1f|IL%d|GV%.1f|JF%.1f",
+		"%dW*%dH|L%d|S%d||PS%.1f|PW%.1f|PG%.1f|IL%d|GV%.1f|JF%.1f",
 		width, height,
 		s.CurrentLevel,
 		s.Score,
