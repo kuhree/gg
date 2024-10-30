@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -37,10 +38,29 @@ var (
 	listGames bool
 )
 
+func getDefaultWorkDir() string {
+	// Follow XDG Base Directory Specification
+	// https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+	dataHome := os.Getenv("XDG_DATA_HOME")
+	if dataHome == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return "./tmp"
+		}
+		dataHome = filepath.Join(homeDir, ".local", "share")
+	}
+	
+	dataDir := filepath.Join(dataHome, "gg")
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		return "./tmp"
+	}
+	return dataDir
+}
+
 func init() {
 	flag.BoolVar(&listGames, "list", false, "List all available games")
 	flag.StringVar(&gameName, "game", "", "Name/Index of the game to launch")
-	flag.StringVar(&workDir, "workDir", "./tmp", "Working directory for the game state")
+	flag.StringVar(&workDir, "workDir", getDefaultWorkDir(), "Working directory for the game state")
 	flag.IntVar(&width, "width", 80, "width of the game")
 	flag.IntVar(&height, "height", 24, "height of the game")
 	flag.Float64Var(&time, "time", 1.0, "target time elapse withing game")
