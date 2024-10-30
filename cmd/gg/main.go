@@ -1,6 +1,9 @@
+// Package main implements a retro-style game launcher for the GG game engine.
+// It provides a command-line interface to launch various ASCII-based games.
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -18,25 +21,34 @@ import (
 	"github.com/kuhree/gg/internal/utils"
 )
 
-type GGGame struct {
-	name        string
-	description string
-	launch      func() error
-}
-
+// Game settings
 var (
-	time     float64
-	fps      float64
-	height   int
-	width    int
-	workDir  string
-	gameName string
+	// Display settings
+	width  int
+	height int
+	fps    float64
 
+	// Game engine settings
+	time    float64
+	workDir string
+
+	// Debug settings
 	debug   bool
 	overlay bool
+)
 
+// CLI flags
+var (
+	gameName  string
 	listGames bool
 )
+
+// Game represents a playable game in the collection
+type Game struct {
+	Name        string
+	Description string
+	Launch      func() error
+}
 
 func getDefaultWorkDir() string {
 	// Follow XDG Base Directory Specification
@@ -105,9 +117,9 @@ func main() {
 	}
 }
 
-func launchSelectedGame(game GGGame) {
-	utils.Logger.Info("Game selected", "name", game.name)
-	err := game.launch()
+func launchSelectedGame(game Game) {
+	utils.Logger.Info("Game selected", "name", game.Name)
+	err := game.Launch()
 	if err != nil {
 		utils.Logger.Error("Failed to launch game", "error", err)
 	}
@@ -117,7 +129,7 @@ func launchGame(gameName string) {
 	utils.Logger.Info("Launching game", "name", gameName)
 
 	for i, game := range games {
-		if game.name == gameName {
+		if game.Name == gameName {
 			launchSelectedGame(game)
 			return
 		}
@@ -138,7 +150,7 @@ func showGameMenu() {
 	utils.Logger.Info("Showing game selection menu")
 
 	for i, game := range games {
-		fmt.Printf("%d. %s: %s\n", i+1, game.name, game.description)
+		fmt.Printf("%d. %s: %s\n", i+1, game.Name, game.Description)
 	}
 
 	var choice string
@@ -163,7 +175,7 @@ func showGameMenu() {
 
 		// Try to match by name
 		for _, game := range games {
-			if strings.EqualFold(choice, game.name) {
+			if strings.EqualFold(choice, game.Name) {
 				launchSelectedGame(game)
 				return
 			}
@@ -173,10 +185,10 @@ func showGameMenu() {
 	}
 }
 
-var games = []GGGame{
+var games = []Game{
 	{
 		"Frames",
-		"A basic demo showcasing the game engine's rendering capabilities",
+		"A technical demo showcasing the game engine's core rendering capabilities and performance",
 		func() error {
 			game := frames.NewGame(width, height)
 
@@ -192,7 +204,7 @@ var games = []GGGame{
 
 	{
 		"Space Invaders",
-		"Classic arcade shooter where you defend Earth from waves of descending aliens",
+		"Classic arcade shooter - defend Earth from waves of descending aliens in this timeless game",
 		func() error {
 			game, err := space_invaders.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
@@ -210,8 +222,8 @@ var games = []GGGame{
 	},
 
 	{
-		"Conway's Game of Life",
-		"Famous cellular automaton where cells evolve based on simple rules of life and death",
+		"Game of Life",
+		"Conway's famous cellular automaton simulation - watch patterns emerge from simple rules",
 		func() error {
 			game, err := gameoflife.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
@@ -229,7 +241,7 @@ var games = []GGGame{
 	},
 	{
 		"Breakout",
-		"Classic arcade game where you bounce a ball to destroy bricks and rack up points",
+		"Arcade classic - break blocks and chase high scores in this addictive paddle game",
 		func() error {
 			game, err := breakout.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
@@ -247,7 +259,7 @@ var games = []GGGame{
 	},
 	{
 		"Flappy Bird",
-		"Guide your bird through an endless series of pipes with precise timing and skill",
+		"Modern classic - navigate through pipes with precise timing in this challenging side-scroller",
 		func() error {
 			game, err := flappybird.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
