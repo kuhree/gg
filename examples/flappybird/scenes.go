@@ -14,14 +14,14 @@ const (
 	lineSpacing = 2
 
 	// Difficulty bounds
-	minPipeSpeed    = 10.0   // Minimum pipe speed
-	maxPipeSpeed    = 50.0   // Maximum pipe speed
-	minPipeGap      = 5.0    // Minimum gap between pipes
-	maxPipeGap      = 20.0   // Maximum gap between pipes
-	minGravity      = 9.8    // Minimum gravity
-	maxGravity      = 25.0   // Maximum gravity
-	minPipeSpacing  = 10.0   // Minimum spacing between pipe pairs
-	maxPipeSpacing  = 40.0   // Maximum spacing between pipe pairs
+	minPipeSpeed   = 10.0 // Minimum pipe speed
+	maxPipeSpeed   = 50.0 // Maximum pipe speed
+	minPipeGap     = 5.0  // Minimum gap between pipes
+	maxPipeGap     = 20.0 // Maximum gap between pipes
+	minGravity     = 9.8  // Minimum gravity
+	maxGravity     = 25.0 // Maximum gravity
+	minPipeSpacing = 10.0 // Minimum spacing between pipe pairs
+	maxPipeSpacing = 40.0 // Maximum spacing between pipe pairs
 )
 
 // BaseScene provides common functionality for all scenes
@@ -74,10 +74,10 @@ type PlayingScene struct {
 	gameStarted bool
 
 	// Current difficulty settings
-	currentPipeSpeed    float64
-	currentPipeGap      float64
-	currentGravity      float64
-	currentPipeSpacing  float64
+	currentPipeSpeed   float64
+	currentPipeGap     float64
+	currentGravity     float64
+	currentPipeSpacing float64
 }
 
 // PauseMenuScene represents the pause menu
@@ -113,11 +113,11 @@ func NewPlayingScene(game *Game) *PlayingScene {
 			blinkInterval: 0.5,
 			showOnBlink:   true,
 		},
-		lives:             game.Config.InitialLives,
-		pipes:             make([]*Pipe, 0),
-		currentPipeSpeed:  game.Config.PipeSpeed,
-		currentPipeGap:    game.Config.PipeGap,
-		currentGravity:    game.Config.BirdGravity,
+		lives:              game.Config.InitialLives,
+		pipes:              make([]*Pipe, 0),
+		currentPipeSpeed:   game.Config.PipeSpeed,
+		currentPipeGap:     game.Config.PipeGap,
+		currentGravity:     game.Config.BirdGravity,
 		currentPipeSpacing: game.Config.PipeSpacing,
 	}
 
@@ -254,7 +254,14 @@ func (s *PlayingScene) spawnPipes() {
 func (s *PlayingScene) Draw(renderer *render.Renderer) {
 	// Draw score and lives
 	_ = renderer.DrawText(fmt.Sprintf("Score: %d", s.Score), 1, 1, render.ColorWhite)
-	_ = renderer.DrawText(fmt.Sprintf("Lives: %d", s.lives), s.Width-10, 1, render.ColorWhite)
+	_ = renderer.DrawText(fmt.Sprintf("Lives: %d", s.lives), 1, 2, render.ColorWhite)
+
+	if s.Debug {
+		_ = renderer.DrawText(fmt.Sprintf("Level: %d", s.CurrentLevel), 1, 3, render.ColorWhite)
+		_ = renderer.DrawText(fmt.Sprintf("Pipe Speed: %.1f", s.currentPipeSpeed), 1, 4, render.ColorWhite)
+		_ = renderer.DrawText(fmt.Sprintf("Pipe Gap: %.1f", s.currentPipeGap), 1, 5, render.ColorWhite)
+		_ = renderer.DrawText(fmt.Sprintf("Pipe Spacing: %.1f", s.currentPipeSpacing), 1, 6, render.ColorWhite)
+	}
 
 	// Draw start message
 	if !s.gameStarted {
@@ -356,15 +363,15 @@ func (s *PlayingScene) updateCollisions(_ float64) {
 		if birdX == pipeX+int(pipe.Width) && !pipe.IsUpperPipe && !pipe.Scored {
 			s.Score++
 			pipe.Scored = true
-			
+
 			// Increase difficulty every 5 points
 			if s.Score%5 == 0 {
 				// Increase difficulty with bounds checking
-				s.currentPipeSpeed = min(maxPipeSpeed, s.currentPipeSpeed*1.2)     // Increase speed by 20%
-				s.currentPipeGap = max(minPipeGap, s.currentPipeGap*0.9)          // Decrease gap by 10%
-				s.currentGravity = min(maxGravity, s.currentGravity*1.1)          // Increase gravity by 10%
+				s.currentPipeSpeed = min(maxPipeSpeed, s.currentPipeSpeed*1.2)       // Increase speed by 20%
+				s.currentPipeGap = max(minPipeGap, s.currentPipeGap*0.9)             // Decrease gap by 10%
+				s.currentGravity = min(maxGravity, s.currentGravity*1.1)             // Increase gravity by 10%
 				s.currentPipeSpacing = max(minPipeSpacing, s.currentPipeSpacing*0.9) // Decrease spacing by 10%
-				s.CurrentLevel++ // Track difficulty level
+				s.CurrentLevel++                                                     // Track difficulty level
 			}
 		}
 	}
@@ -398,18 +405,51 @@ func (s *PlayingScene) drawObjOverlay(x, y int, color render.Color) {
 	}
 
 	if s.Overlay {
-		char := '0'
-		_ = s.Renderer.DrawChar(char, x, y, color)
+		// Draw hitbox markers at corners
+		markers := []struct {
+			char   rune
+			dx, dy int
+		}{
+			{'┌', -1, -1}, {'┐', 1, -1}, // Top corners
+			{'└', -1, 1}, {'┘', 1, 1}, // Bottom corners
+		}
+		for _, m := range markers {
+			_ = s.Renderer.DrawChar(m.char, x+m.dx, y+m.dy, color)
+		}
+		// Center marker
+		_ = s.Renderer.DrawChar('╋', x, y, color)
 	}
 
 	if s.Debug {
 		debugInfo := []string{
-			fmt.Sprintf("Pos: (%.1f,%.1f)", float64(x), float64(y)),
-			fmt.Sprintf("Color: %d", color),
+			("┌─ Position ─────────┐"),
+			fmt.Sprintf("│ X: %-15.1f│", float64(x)),
+			fmt.Sprintf("│ Y: %-15.1f│", float64(y)),
+			("└───────────────────┘"),
 		}
 
+		// Add bird-specific debug info
+		if s.bird != nil && x == int(s.bird.Position.X) && y == int(s.bird.Position.Y) {
+			debugInfo = append(debugInfo,
+				("┌─ Bird Stats ─────────┐"),
+				fmt.Sprintf("│ Velocity: %-10.1f│", s.bird.Velocity),
+				fmt.Sprintf("│ Gravity:  %-10.1f│", s.bird.Gravity),
+				fmt.Sprintf("│ Jump:     %-10.1f│", s.bird.JumpForce),
+				("└────────────────────┘"),
+			)
+		}
+
+		// Add difficulty info when debugging bird
+		if s.bird != nil && x == int(s.bird.Position.X) {
+			debugInfo = append(debugInfo,
+				("┌─ Difficulty ─────────┐"),
+				("└────────────────────┘"),
+			)
+		}
+
+		// Draw debug info offset to the right
 		for i, info := range debugInfo {
-			_ = s.Renderer.DrawText(info, x+1, y+i, color)
+			_ = s.Renderer.DrawText(info, x+3, y+i-len(debugInfo)/2, render.ColorBrightBlue)
 		}
 	}
 }
