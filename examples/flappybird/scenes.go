@@ -313,21 +313,9 @@ func (s *PlayingScene) HandleInput(input core.InputEvent) error {
 	case 'q', 'Q':
 		s.Scenes.ChangeScene(GameOverSceneID)
 	case '=', '+':
-		// Increase level
-		s.CurrentLevel++
-		s.currentPipeSpeed = min(maxPipeSpeed, s.currentPipeSpeed*1.2)
-		s.currentPipeGap = max(minPipeGap, s.currentPipeGap*0.9)
-		s.currentGravity = min(maxGravity, s.currentGravity*1.1)
-		s.currentPipeSpacing = max(minPipeSpacing, s.currentPipeSpacing*0.9)
+		s.increaseLevel()
 	case '-', '_':
-		// Decrease level if above 0
-		if s.CurrentLevel > 0 {
-			s.CurrentLevel--
-			s.currentPipeSpeed = max(minPipeSpeed, s.currentPipeSpeed/1.2)
-			s.currentPipeGap = min(maxPipeGap, s.currentPipeGap/0.9)
-			s.currentGravity = max(minGravity, s.currentGravity/1.1)
-			s.currentPipeSpacing = min(maxPipeSpacing, s.currentPipeSpacing/0.9)
-		}
+		s.decreaseLevel()
 	case ' ':
 		if !s.gameStarted {
 			s.gameStarted = true
@@ -383,12 +371,7 @@ func (s *PlayingScene) updateCollisions(_ float64) {
 
 			// Increase difficulty every 5 points
 			if s.Score%5 == 0 {
-				// Increase difficulty with bounds checking
-				s.currentPipeSpeed = min(maxPipeSpeed, s.currentPipeSpeed*1.2)       // Increase speed by 20%
-				s.currentPipeGap = max(minPipeGap, s.currentPipeGap*0.9)             // Decrease gap by 10%
-				s.currentGravity = min(maxGravity, s.currentGravity*1.1)             // Increase gravity by 10%
-				s.currentPipeSpacing = max(minPipeSpacing, s.currentPipeSpacing*0.9) // Decrease spacing by 10%
-				s.CurrentLevel++                                                     // Track difficulty level
+				s.increaseLevel()
 			}
 		}
 	}
@@ -409,6 +392,26 @@ func (s *PlayingScene) checkGameState(_ float64) (bool, string) {
 	}
 
 	return false, ""
+}
+
+// increaseLevel increases the game difficulty by adjusting various parameters
+func (s *PlayingScene) increaseLevel() {
+	s.CurrentLevel++
+	s.currentPipeSpeed = min(maxPipeSpeed, s.currentPipeSpeed*1.2)       // Increase speed by 20%
+	s.currentPipeGap = max(minPipeGap, s.currentPipeGap*0.9)            // Decrease gap by 10%
+	s.currentGravity = min(maxGravity, s.currentGravity*1.1)            // Increase gravity by 10%
+	s.currentPipeSpacing = max(minPipeSpacing, s.currentPipeSpacing*0.9) // Decrease spacing by 10%
+}
+
+// decreaseLevel decreases the game difficulty if above level 0
+func (s *PlayingScene) decreaseLevel() {
+	if s.CurrentLevel > 0 {
+		s.CurrentLevel--
+		s.currentPipeSpeed = max(minPipeSpeed, s.currentPipeSpeed/1.2)    // Decrease speed by 20%
+		s.currentPipeGap = min(maxPipeGap, s.currentPipeGap/0.9)         // Increase gap by 10%
+		s.currentGravity = max(minGravity, s.currentGravity/1.1)         // Decrease gravity by 10%
+		s.currentPipeSpacing = min(maxPipeSpacing, s.currentPipeSpacing/0.9) // Increase spacing by 10%
+	}
 }
 
 func (s *PlayingScene) endGame(reason string) {
