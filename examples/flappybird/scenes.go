@@ -439,10 +439,33 @@ func (s *PlayingScene) drawObjOverlay(x, y int, color render.Color) {
 			)
 		}
 
-		// Add difficulty info when debugging bird
-		if s.bird != nil && x == int(s.bird.Position.X) {
+		// Add pipe-specific debug info
+		for _, pipe := range s.pipes {
+			if x == int(pipe.Position.X) && y == int(pipe.Position.Y) {
+				pipeType := "Lower"
+				if pipe.IsUpperPipe {
+					pipeType = "Upper"
+				}
+				debugInfo = append(debugInfo,
+					("┌─ Pipe Stats ─────────┐"),
+					fmt.Sprintf("│ Type:   %-11s│", pipeType),
+					fmt.Sprintf("│ Height: %-11.1f│", pipe.Height),
+					fmt.Sprintf("│ Width:  %-11.1f│", pipe.Width),
+					fmt.Sprintf("│ Scored: %-11v│", pipe.Scored),
+					("└────────────────────┘"),
+				)
+			}
+		}
+
+		// Add difficulty info when debugging bird or pipes
+		if (s.bird != nil && x == int(s.bird.Position.X)) || 
+		   (len(s.pipes) > 0 && x == int(s.pipes[0].Position.X)) {
 			debugInfo = append(debugInfo,
 				("┌─ Difficulty ─────────┐"),
+				fmt.Sprintf("│ Speed:    %-10.1f│", s.currentPipeSpeed),
+				fmt.Sprintf("│ Gap:      %-10.1f│", s.currentPipeGap),
+				fmt.Sprintf("│ Spacing:  %-10.1f│", s.currentPipeSpacing),
+				fmt.Sprintf("│ Gravity:  %-10.1f│", s.currentGravity),
 				("└────────────────────┘"),
 			)
 		}
