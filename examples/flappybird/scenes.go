@@ -12,6 +12,16 @@ import (
 const (
 	titleOffset = 1.0 / 10
 	lineSpacing = 2
+
+	// Difficulty bounds
+	minPipeSpeed    = 10.0   // Minimum pipe speed
+	maxPipeSpeed    = 50.0   // Maximum pipe speed
+	minPipeGap      = 5.0    // Minimum gap between pipes
+	maxPipeGap      = 20.0   // Maximum gap between pipes
+	minGravity      = 9.8    // Minimum gravity
+	maxGravity      = 25.0   // Maximum gravity
+	minPipeSpacing  = 10.0   // Minimum spacing between pipe pairs
+	maxPipeSpacing  = 40.0   // Maximum spacing between pipe pairs
 )
 
 // BaseScene provides common functionality for all scenes
@@ -349,11 +359,12 @@ func (s *PlayingScene) updateCollisions(_ float64) {
 			
 			// Increase difficulty every 5 points
 			if s.Score%5 == 0 {
-				s.currentPipeSpeed *= 1.2     // Increase pipe speed by 20%
-				s.currentPipeGap *= 0.9       // Decrease gap by 10%
-				s.currentGravity *= 1.1       // Increase gravity by 10%
-				s.currentPipeSpacing *= 0.9   // Decrease spacing by 10%
-				s.CurrentLevel++              // Track difficulty level
+				// Increase difficulty with bounds checking
+				s.currentPipeSpeed = min(maxPipeSpeed, s.currentPipeSpeed*1.2)     // Increase speed by 20%
+				s.currentPipeGap = max(minPipeGap, s.currentPipeGap*0.9)          // Decrease gap by 10%
+				s.currentGravity = min(maxGravity, s.currentGravity*1.1)          // Increase gravity by 10%
+				s.currentPipeSpacing = max(minPipeSpacing, s.currentPipeSpacing*0.9) // Decrease spacing by 10%
+				s.CurrentLevel++ // Track difficulty level
 			}
 		}
 	}
