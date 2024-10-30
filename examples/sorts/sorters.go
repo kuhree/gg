@@ -142,9 +142,11 @@ func (s *MergeSort) Step(arr []int, g *Game) bool {
 		if temp[i] <= temp[j] {
 			arr[k] = temp[i]
 			i++
+			g.SwapCount++
 		} else {
 			arr[k] = temp[j]
 			j++
+			g.SwapCount++
 		}
 		k++
 	}
@@ -154,11 +156,13 @@ func (s *MergeSort) Step(arr []int, g *Game) bool {
 		arr[k] = temp[i]
 		i++
 		k++
+		g.SwapCount++
 	}
 	for j < rightEnd {
 		arr[k] = temp[j]
 		j++
 		k++
+		g.SwapCount++
 	}
 
 	s.left += s.size * 2
