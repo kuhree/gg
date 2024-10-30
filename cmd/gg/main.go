@@ -150,7 +150,7 @@ func showGameMenu() {
 var games = []GGGame{
 	{
 		"Frames",
-		"A simple frame rendering demo",
+		"A basic demo showcasing the game engine's rendering capabilities",
 		func() error {
 			game := frames.NewGame(width, height)
 
@@ -166,7 +166,7 @@ var games = []GGGame{
 
 	{
 		"Space Invaders",
-		"Classic arcade shooter game",
+		"Classic arcade shooter where you defend Earth from waves of descending aliens",
 		func() error {
 			game, err := space_invaders.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
@@ -185,7 +185,7 @@ var games = []GGGame{
 
 	{
 		"Conway's Game of Life",
-		"Cellular automaton simulation",
+		"Famous cellular automaton where cells evolve based on simple rules of life and death",
 		func() error {
 			game, err := gameoflife.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
@@ -203,7 +203,7 @@ var games = []GGGame{
 	},
 	{
 		"Breakout",
-		"Brick Breakerr",
+		"Classic arcade game where you bounce a ball to destroy bricks and rack up points",
 		func() error {
 			game, err := breakout.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
@@ -221,7 +221,7 @@ var games = []GGGame{
 	},
 	{
 		"Flappy Bird",
-		"Jump between the pipe, don't die",
+		"Guide your bird through an endless series of pipes with precise timing and skill",
 		func() error {
 			game, err := flappybird.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
