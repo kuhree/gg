@@ -85,6 +85,16 @@ func SetLogLevel(level slog.Level) error {
 	})
 }
 
+// SetLogFile changes the log file path
+func SetLogFile(filepath string) error {
+	return SetupLogger(LogConfig{
+		LogFile:     filepath,
+		MaxSize:     defaultConfig.MaxSize,
+		LogToStdout: defaultConfig.LogToStdout,
+		Level:       defaultConfig.Level,
+	})
+}
+
 // Cleanup closes the log file
 func Cleanup() error {
 	if logFile != nil {
