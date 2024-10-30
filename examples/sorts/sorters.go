@@ -1,7 +1,7 @@
 package sorts
 
 type Sorter interface {
-	Step(arr []int) bool // Returns true when sort is complete
+	Step(arr []int, g *Game) bool // Returns true when sort is complete
 	Name() string
 }
 
@@ -19,7 +19,7 @@ func (s *QuickSort) Name() string {
 	return "Quick Sort"
 }
 
-func (s *QuickSort) Step(arr []int) bool {
+func (s *QuickSort) Step(arr []int, g *Game) bool {
 	if len(s.stack) == 0 {
 		if len(arr) > 1 {
 			s.stack = append(s.stack, [2]int{0, len(arr) - 1})
@@ -37,9 +37,11 @@ func (s *QuickSort) Step(arr []int) bool {
 	i := left - 1
 
 	for j := left; j < right; j++ {
+		g.ComparisonCount++
 		if arr[j] <= pivot {
 			i++
 			arr[i], arr[j] = arr[j], arr[i]
+			g.SwapCount++
 		}
 	}
 	arr[i+1], arr[right] = arr[right], arr[i+1]
@@ -68,7 +70,7 @@ func (s *BubbleSort) Name() string {
 	return "Bubble Sort"
 }
 
-func (s *BubbleSort) Step(arr []int) bool {
+func (s *BubbleSort) Step(arr []int, g *Game) bool {
 	if s.i >= len(arr)-1 {
 		return true
 	}
@@ -79,8 +81,10 @@ func (s *BubbleSort) Step(arr []int) bool {
 		return s.i >= len(arr)-1
 	}
 
+	g.ComparisonCount++
 	if arr[s.j] > arr[s.j+1] {
 		arr[s.j], arr[s.j+1] = arr[s.j+1], arr[s.j]
+		g.SwapCount++
 	}
 	s.j++
 	return false
@@ -103,7 +107,7 @@ func (s *MergeSort) Name() string {
 	return "Merge Sort"
 }
 
-func (s *MergeSort) Step(arr []int) bool {
+func (s *MergeSort) Step(arr []int, g *Game) bool {
 	if s.size >= len(arr) {
 		return true
 	}
@@ -134,6 +138,7 @@ func (s *MergeSort) Step(arr []int) bool {
 	rightEnd := right - s.left
 
 	for i < mid-s.left && j < rightEnd {
+		g.ComparisonCount++
 		if temp[i] <= temp[j] {
 			arr[k] = temp[i]
 			i++
