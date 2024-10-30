@@ -87,17 +87,15 @@ func (s *BubbleSort) Step(arr []int) bool {
 }
 
 type MergeSort struct {
-	size     int
-	left     int
-	stage    int // 0: splitting, 1: merging
-	tempArr  []int
+	size    int
+	left    int
+	tempArr []int
 }
 
 func NewMergeSort() *MergeSort {
 	return &MergeSort{
-		size:  1,
-		left:  0,
-		stage: 0,
+		size: 1,
+		left: 0,
 	}
 }
 
@@ -117,37 +115,47 @@ func (s *MergeSort) Step(arr []int) bool {
 	}
 
 	mid := s.left + s.size
+	if mid > len(arr) {
+		mid = len(arr)
+	}
 	right := mid + s.size
 	if right > len(arr) {
 		right = len(arr)
 	}
 
-	// Merge
-	if s.tempArr == nil {
-		s.tempArr = make([]int, right-s.left)
-		copy(s.tempArr, arr[s.left:right])
-	}
+	// Create temp array for merging
+	temp := make([]int, right-s.left)
+	copy(temp, arr[s.left:right])
 
-	i, j := s.left, mid
-	k := s.left
-	for i < mid && j < right {
-		if arr[i] <= arr[j] {
-			arr[k] = arr[i]
+	// Merge the two halves
+	i := 0                 // Index for left half in temp array
+	j := mid - s.left     // Index for right half in temp array
+	k := s.left           // Index in original array
+	rightEnd := right - s.left
+
+	for i < mid-s.left && j < rightEnd {
+		if temp[i] <= temp[j] {
+			arr[k] = temp[i]
 			i++
 		} else {
-			arr[k] = arr[j]
+			arr[k] = temp[j]
 			j++
 		}
 		k++
 	}
 
-	for i < mid {
-		arr[k] = arr[i]
+	// Copy remaining elements
+	for i < mid-s.left {
+		arr[k] = temp[i]
 		i++
+		k++
+	}
+	for j < rightEnd {
+		arr[k] = temp[j]
+		j++
 		k++
 	}
 
 	s.left += s.size * 2
-	s.tempArr = nil
 	return false
 }
