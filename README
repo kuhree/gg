@@ -20,9 +20,11 @@ GG is a bunch of classic games written in Go. It's designed to create classic ar
 
 The `examples/` directory contains implementations of classic 2D games, including:
 
-1. Space Invaders
-2. Conway's Game of life
-3. Breakout*
+1. Frames - not a game but useful for testing "FPS"
+2. Space Invaders
+3. Conway's Game of life
+4. Breakout*
+5. Flappy Bird
 
 > \*Not yet implemented
 
