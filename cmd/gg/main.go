@@ -12,8 +12,8 @@ import (
 	"github.com/kuhree/gg/examples/breakout"
 	"github.com/kuhree/gg/examples/flappybird"
 	"github.com/kuhree/gg/examples/frames"
-	gameoflife "github.com/kuhree/gg/examples/game_of_life"
-	"github.com/kuhree/gg/examples/space_invaders"
+	"github.com/kuhree/gg/examples/gameoflife"
+	"github.com/kuhree/gg/examples/spaceinvaders"
 	"github.com/kuhree/gg/internal/engine/core"
 	"github.com/kuhree/gg/internal/utils"
 )
@@ -63,8 +63,8 @@ func init() {
 	flag.StringVar(&workDir, "workDir", getDefaultWorkDir(), "Working directory for the game state")
 	flag.IntVar(&width, "width", 80, "width of the game")
 	flag.IntVar(&height, "height", 24, "height of the game")
-	flag.Float64Var(&time, "time", 1.0, "target time elapse withing game")
-	flag.Float64Var(&fps, "fps", 60, "target fps withing game (24,30,60,120,240)")
+	flag.Float64Var(&time, "time", 1.0, "target time elapse within game")
+	flag.Float64Var(&fps, "fps", 60, "target fps within game (24,30,60,120,240)")
 
 	flag.BoolVar(&overlay, "overlay", false, "Enable some useful overlays")
 	flag.BoolVar(&debug, "debug", false, "Enable Debug logging. Will enable all other debug attributes.")
@@ -94,7 +94,9 @@ func main() {
 	}
 
 	utils.Logger.Info("Starting GG", "debug", debug)
-	defer utils.Cleanup()
+	defer func() {
+		_ = utils.Cleanup()
+	}()
 
 	if gameName != "" {
 		launchGame(gameName)
