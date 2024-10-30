@@ -22,14 +22,16 @@ type LogConfig struct {
 }
 
 var (
-	Logger    *slog.Logger
-	logFile   *os.File
+	Logger        *slog.Logger
+	logFile       *os.File
 	defaultConfig = LogConfig{
 		LogFile:     "gg.log",
 		MaxSize:     10, // 10MB
 		LogToStdout: false,
 		Level:       slog.LevelWarn,
 	}
+	// Config tracks the active configuration
+	Config = defaultConfig
 )
 
 func init() {
@@ -75,19 +77,16 @@ func SetupLogger(config LogConfig) error {
 	return nil
 }
 
-// currentConfig tracks the active configuration
-var currentConfig = defaultConfig
-
 // SetLogLevel sets the log level for the logger
 func SetLogLevel(level slog.Level) error {
-	currentConfig.Level = level
-	return SetupLogger(currentConfig)
+	Config.Level = level
+	return SetupLogger(Config)
 }
 
 // SetLogFile changes the log file path
 func SetLogFile(filepath string) error {
-	currentConfig.LogFile = filepath
-	return SetupLogger(currentConfig)
+	Config.LogFile = filepath
+	return SetupLogger(Config)
 }
 
 // Cleanup closes the log file
@@ -131,7 +130,7 @@ func rotateLog(config LogConfig) {
 	// Rotate the log file
 	timestamp := time.Now().Format("20060102-150405")
 	rotatedName := fmt.Sprintf("%s.%s", config.LogFile, timestamp)
-	
+
 	if err := os.Rename(config.LogFile, rotatedName); err != nil {
 		Logger.Error("Failed to rotate log file", "error", err)
 		return
