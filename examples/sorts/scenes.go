@@ -151,7 +151,25 @@ func (s *VisualizerScene) Draw(renderer *render.Renderer) {
 	_ = renderer.DrawText(fmt.Sprintf("Time: %.2fs", s.ElapsedTime), startX+70, statsY, render.ColorWhite)
 
 	if s.SortComplete {
-		_ = renderer.DrawText("Sort Complete!", startX, statsY-1, render.ColorGreen)
+		// Draw black background box for completion stats
+		boxWidth := 40
+		boxHeight := 6
+		boxStartY := height/2 - boxHeight/2
+		boxStartX := width/2 - boxWidth/2
+		
+		// Draw box background
+		for y := 0; y < boxHeight; y++ {
+			for x := 0; x < boxWidth; x++ {
+				_ = renderer.DrawChar(' ', boxStartX+x, boxStartY+y, render.ColorBlack)
+			}
+		}
+		
+		// Draw completion stats
+		_ = renderer.DrawText("Sort Complete!", boxStartX+2, boxStartY+1, render.ColorWhite)
+		_ = renderer.DrawText(fmt.Sprintf("Algorithm: %s", s.CurrentSorter.Name()), boxStartX+2, boxStartY+2, render.ColorWhite)
+		_ = renderer.DrawText(fmt.Sprintf("Comparisons: %d", s.ComparisonCount), boxStartX+2, boxStartY+3, render.ColorWhite)
+		_ = renderer.DrawText(fmt.Sprintf("Swaps: %d", s.SwapCount), boxStartX+2, boxStartY+4, render.ColorWhite)
+		_ = renderer.DrawText(fmt.Sprintf("Time: %.2fs", s.ElapsedTime), boxStartX+2, boxStartY+5, render.ColorWhite)
 	}
 }
 
