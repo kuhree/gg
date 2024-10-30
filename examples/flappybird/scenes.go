@@ -448,7 +448,7 @@ func (s *GameOverScene) GetDetails() string {
 		s.Config.PipeGap,
 		s.Config.InitialLives,
 		s.Config.BirdGravity,
-		s.Config.JumpForce,
+		s.Config.BirdJumpForce,
 	)
 }
 
