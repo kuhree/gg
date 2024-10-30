@@ -86,11 +86,15 @@ func main() {
 	}
 
 	if debug {
-		utils.SetLogLevel(slog.LevelDebug)
 		overlay = true
+		if err := utils.SetLogLevel(slog.LevelDebug); err != nil {
+			utils.Logger.Error("Failed to set log level", "error", err)
+			os.Exit(1)
+		}
 	}
 
 	utils.Logger.Info("Starting GG", "debug", debug)
+	defer utils.Cleanup()
 
 	if gameName != "" {
 		launchGame(gameName)

@@ -27,7 +27,7 @@ var (
 	defaultConfig = LogConfig{
 		LogFile:     "gg.log",
 		MaxSize:     10, // 10MB
-		LogToStdout: true,
+		LogToStdout: false,
 		Level:       slog.LevelWarn,
 	}
 )
