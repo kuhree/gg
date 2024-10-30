@@ -41,11 +41,11 @@ func NewBird(x, y float64, config *Config) *Bird {
 }
 
 // NewPipe creates a new pipe instance
-func NewPipe(x, y float64, height float64, isUpper bool) *Pipe {
+func NewPipe(x, y float64, height float64, width float64, isUpper bool) *Pipe {
 	return &Pipe{
 		GameObject: objects.GameObject{
 			Position: objects.Vector2D{X: x, Y: y},
-			Width:    2,
+			Width:    width,
 			Height:   height,
 		},
 		Color:       render.ColorGreen,
