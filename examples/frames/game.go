@@ -21,23 +21,27 @@ type Game struct {
 	lastTime  time.Time
 	totalTime float64
 
-	frameCount int
-	curremtFps float64
-	minFps     float64
-	maxFps     float64
-	avgFps     float64
+	frameCount  int
+	targetFps   float64
+	currentFps  float64
+	minFps      float64
+	maxFps      float64
+	avgFps      float64
+	targetDelta float64
 }
 
 // NewGame creates a new instance of the Frames game
-func NewGame(width, height int) *Game {
-	renderer := render.NewRenderer(width, height, render.DefaultPalette) // Create a 80x24 ASCII renderer
+func NewGame(width, height int, targetFps float64) *Game {
+	renderer := render.NewRenderer(width, height, render.DefaultPalette)
 
 	return &Game{
-		Width:    width,
-		Height:   height,
-		renderer: renderer,
-		logger:   utils.Logger,
-		lastTime: time.Now(),
+		Width:       width,
+		Height:      height,
+		renderer:    renderer,
+		logger:      utils.Logger,
+		lastTime:    time.Now(),
+		targetFps:   targetFps,
+		targetDelta: 1.0 / targetFps,
 	}
 }
 
@@ -46,12 +50,14 @@ func (g *Game) Update(dt float64) error {
 	now := time.Now()
 	elapsed := now.Sub(g.lastTime).Seconds()
 	currentFps := 1 / elapsed
-	g.curremtFps = currentFps
+	g.currentFps = currentFps
 	g.lastTime = now
 
 	// Update stats
 	g.frameCount++
 	g.totalTime += elapsed
+
+	// Calculate FPS difference from target
 
 	if g.frameCount == 1 {
 		g.minFps = currentFps
@@ -77,14 +83,22 @@ func (g *Game) Size() (int, int) {
 func (g *Game) Draw() {
 	g.renderer.Clear()
 
-	// Display current FPS
-	fpsText := fmt.Sprintf("Current FPS: %.2f", g.curremtFps)
-	_ = g.renderer.DrawText(fpsText, 2, 2, render.ColorBlue)
+	// Display FPS info
+	_ = g.renderer.DrawText(fmt.Sprintf("Target FPS: %.2f", g.targetFps), 2, 2, render.ColorWhite)
+	_ = g.renderer.DrawText(fmt.Sprintf("Current FPS: %.2f", g.currentFps), 2, 3, render.ColorBlue)
+	fpsDiff := g.currentFps - g.targetFps
+	diffColor := render.ColorYellow
+	if fpsDiff > 5 {
+		diffColor = render.ColorGreen
+	} else if fpsDiff < -5 {
+		diffColor = render.ColorRed
+	}
+	_ = g.renderer.DrawText(fmt.Sprintf("FPS Diff: %+.2f", fpsDiff), 2, 4, diffColor)
 
 	// Display FPS statistics
-	_ = g.renderer.DrawText(fmt.Sprintf("Min FPS: %.2f", g.minFps), 2, 3, render.ColorGreen)
-	_ = g.renderer.DrawText(fmt.Sprintf("Max FPS: %.2f", g.maxFps), 2, 4, render.ColorRed)
-	_ = g.renderer.DrawText(fmt.Sprintf("Avg FPS: %.2f", g.avgFps), 2, 5, render.ColorYellow)
+	_ = g.renderer.DrawText(fmt.Sprintf("Min FPS: %.2f", g.minFps), 2, 6, render.ColorGreen)
+	_ = g.renderer.DrawText(fmt.Sprintf("Max FPS: %.2f", g.maxFps), 2, 7, render.ColorRed)
+	_ = g.renderer.DrawText(fmt.Sprintf("Avg FPS: %.2f", g.avgFps), 2, 8, render.ColorYellow)
 
 	// Display frame count and total time
 	_ = g.renderer.DrawText(fmt.Sprintf("Frames: %d", g.frameCount), 2, 7, render.ColorCyan)

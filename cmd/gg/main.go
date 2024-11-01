@@ -195,7 +195,7 @@ var games = []Game{
 		"Frames",
 		"A technical demo showcasing the game engine's core rendering capabilities and performance",
 		func() error {
-			game := frames.NewGame(width, height)
+			game := frames.NewGame(width, height, fps)
 
 			gl := core.NewGameLoop(game)
 			if err := gl.Run(time, fps); err != nil {
