@@ -10,6 +10,9 @@ import (
 	"github.com/kuhree/gg/internal/utils"
 )
 
+// Intervals for FPS statistics tracking (in seconds)
+var statsIntervals = []float64{5, 10, 30}
+
 // Game represents the Frames game state and logic
 type Game struct {
 	Width  int
@@ -26,10 +29,8 @@ type Game struct {
 	currentFps  float64
 	targetDelta float64
 
-	// FPS stats for different intervals
-	fpsStats5s  *fpsStats
-	fpsStats10s *fpsStats
-	fpsStats30s *fpsStats
+	// FPS stats for configured intervals
+	fpsStats []*fpsStats
 }
 
 // NewGame creates a new instance of the Frames game
@@ -45,9 +46,7 @@ func NewGame(width, height int, targetFps float64) *Game {
 		lastTime:    now,
 		targetFps:   targetFps,
 		targetDelta: 1.0 / targetFps,
-		fpsStats5s:  newFpsStats(5 * time.Second),
-		fpsStats10s: newFpsStats(10 * time.Second),
-		fpsStats30s: newFpsStats(30 * time.Second),
+		fpsStats:    make([]*fpsStats, len(statsIntervals)),
 	}
 }
 
@@ -62,10 +61,17 @@ func (g *Game) Update(dt float64) error {
 	g.frameCount++
 	g.totalTime += elapsed
 
+	// Initialize stats trackers if needed
+	if g.fpsStats[0] == nil {
+		for i, interval := range statsIntervals {
+			g.fpsStats[i] = newFpsStats(time.Duration(interval * float64(time.Second)))
+		}
+	}
+
 	// Update interval stats
-	g.fpsStats5s.update(currentFps, now)
-	g.fpsStats10s.update(currentFps, now)
-	g.fpsStats30s.update(currentFps, now)
+	for _, stats := range g.fpsStats {
+		stats.update(currentFps, now)
+	}
 	return nil
 }
 
@@ -91,17 +97,15 @@ func (g *Game) Draw() {
 	_ = g.renderer.DrawText(fmt.Sprintf("FPS Diff: %+.2f", fpsDiff), 2, 4, diffColor)
 
 	// Display FPS statistics for different intervals
-	_ = g.renderer.DrawText("5 Second Stats:", 2, 6, render.ColorWhite)
-	_ = g.renderer.DrawText(fmt.Sprintf("  Min: %.2f  Max: %.2f  Avg: %.2f", 
-		g.fpsStats5s.min, g.fpsStats5s.max, g.fpsStats5s.avg()), 2, 7, render.ColorGreen)
-
-	_ = g.renderer.DrawText("10 Second Stats:", 2, 9, render.ColorWhite)
-	_ = g.renderer.DrawText(fmt.Sprintf("  Min: %.2f  Max: %.2f  Avg: %.2f", 
-		g.fpsStats10s.min, g.fpsStats10s.max, g.fpsStats10s.avg()), 2, 10, render.ColorYellow)
-
-	_ = g.renderer.DrawText("30 Second Stats:", 2, 12, render.ColorWhite)
-	_ = g.renderer.DrawText(fmt.Sprintf("  Min: %.2f  Max: %.2f  Avg: %.2f", 
-		g.fpsStats30s.min, g.fpsStats30s.max, g.fpsStats30s.avg()), 2, 13, render.ColorMagenta)
+	colors := []render.Color{render.ColorGreen, render.ColorYellow, render.ColorMagenta}
+	y := 6
+	for i, stats := range g.fpsStats {
+		color := colors[i%len(colors)]
+		_ = g.renderer.DrawText(fmt.Sprintf("%.0f Second Stats:", statsIntervals[i]), 2, y, render.ColorWhite)
+		_ = g.renderer.DrawText(fmt.Sprintf("  Min: %.2f  Max: %.2f  Avg: %.2f",
+			stats.min, stats.max, stats.avg()), 2, y+1, color)
+		y += 3
+	}
 
 	// Display frame count and total time
 	_ = g.renderer.DrawText(fmt.Sprintf("Frames: %d", g.frameCount), 2, 15, render.ColorCyan)
