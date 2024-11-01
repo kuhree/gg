@@ -86,6 +86,7 @@ func (g *Game) Draw() {
 	// Display FPS info
 	_ = g.renderer.DrawText(fmt.Sprintf("Target FPS: %.2f", g.targetFps), 2, 2, render.ColorWhite)
 	_ = g.renderer.DrawText(fmt.Sprintf("Current FPS: %.2f", g.currentFps), 2, 3, render.ColorBlue)
+
 	fpsDiff := g.currentFps - g.targetFps
 	diffColor := render.ColorYellow
 	if fpsDiff > 5 {
@@ -101,11 +102,11 @@ func (g *Game) Draw() {
 	_ = g.renderer.DrawText(fmt.Sprintf("Avg FPS: %.2f", g.avgFps), 2, 8, render.ColorYellow)
 
 	// Display frame count and total time
-	_ = g.renderer.DrawText(fmt.Sprintf("Frames: %d", g.frameCount), 2, 7, render.ColorCyan)
-	_ = g.renderer.DrawText(fmt.Sprintf("Total Time: %.2fs", g.totalTime), 2, 8, render.ColorMagenta)
+	_ = g.renderer.DrawText(fmt.Sprintf("Frames: %d", g.frameCount), 2, 9, render.ColorCyan)
+	_ = g.renderer.DrawText(fmt.Sprintf("Total Time: %.2fs", g.totalTime), 2, 10, render.ColorMagenta)
 
 	// Display window dimensions
-	_ = g.renderer.DrawText(fmt.Sprintf("Window: %dx%d", g.Width, g.Height), 2, 10, render.ColorWhite)
+	_ = g.renderer.DrawText(fmt.Sprintf("Window: %dx%d", g.Width, g.Height), 2, 11, render.ColorWhite)
 
 	g.renderer.Render()
 }
