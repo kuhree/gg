@@ -3,8 +3,9 @@ package leaderboard
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"sort"
+
+	"github.com/kuhree/gg/internal/utils"
 )
 
 type Record struct {
@@ -46,15 +47,11 @@ func (b *Board) Add(name string, score int, notes string) {
 	}
 }
 
-func ensureDir(filename string) error {
-	dir := filepath.Dir(filename)
-	return os.MkdirAll(dir, 0755)
-}
 
 func (b *Board) Save(filename string) error {
 	if len(b.Records) <= 0 {
 		return nil
-	} else if err := ensureDir(filename); err != nil {
+	} else if err := utils.EnsureDir(filename); err != nil {
 		return err
 	}
 
@@ -67,7 +64,7 @@ func (b *Board) Save(filename string) error {
 }
 
 func (b *Board) Load(filename string) error {
-	if err := ensureDir(filename); err != nil {
+	if err := utils.EnsureDir(filename); err != nil {
 		return err
 	}
 	file, err := os.Open(filename)
