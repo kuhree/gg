@@ -43,11 +43,11 @@ var (
 	listGames bool
 )
 
-// Game represents a playable game in the collection
-type Game struct {
+// Launcher represents a playable game in the collection
+type Launcher struct {
 	Name        string
 	Description string
-	Launch      func() error
+	Launch      func() (core.Game, error)
 }
 
 func init() {
@@ -122,9 +122,28 @@ func getDefaultWorkDir() string {
 	return dataDir
 }
 
-func launchSelectedGame(game Game) {
-	utils.Logger.Info("Game selected", "name", game.Name)
-	err := game.Launch()
+func launchSelectedGame(launcher Launcher) {
+	utils.Logger.Info("Game selected", "name", launcher.Name)
+	game, err := launcher.Launch()
+	if err != nil {
+		utils.Logger.Error("Failed to launch game", "error", err)
+		os.Exit(1)
+	}
+
+	gl := core.NewGameLoop(game)
+	err = gl.Run(time, fps)
+	if err != nil {
+		if err == core.ErrQuitGame {
+			utils.Logger.Warn("Quit game!", "error", err)
+			os.Exit(0)
+		} else {
+			utils.Logger.Error("Game failed while running", "error", err)
+			os.Exit(1)
+		}
+	}
+	defer gl.Stop()
+
+	// return nil
 	if err != nil {
 		utils.Logger.Error("Failed to launch game", "error", err)
 	}
@@ -190,112 +209,75 @@ func showGameMenu() {
 	}
 }
 
-var games = []Game{
+var games = []Launcher{
 	{
 		"Frames",
 		"A technical demo showcasing the game engine's core rendering capabilities and performance",
-		func() error {
+		func() (core.Game, error) {
 			game := frames.NewGame(width, height, fps)
-
-			gl := core.NewGameLoop(game)
-			if err := gl.Run(time, fps); err != nil {
-				return err
-			}
-			defer gl.Stop()
-
-			return nil
+			return game, nil
 		},
 	},
 
 	{
 		"Space Invaders",
 		"Classic arcade shooter - defend Earth from waves of descending aliens in this timeless game",
-		func() error {
+		func() (core.Game, error) {
 			game, err := space_invaders.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
-			gl := core.NewGameLoop(game)
-			if err := gl.Run(time, fps); err != nil {
-				return err
-			}
-			defer gl.Stop()
-
-			return nil
+			return game, nil
 		},
 	},
 
 	{
 		"Game of Life",
 		"Conway's famous cellular automaton simulation - watch patterns emerge from simple rules",
-		func() error {
+		func() (core.Game, error) {
 			game, err := gameoflife.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
-			gl := core.NewGameLoop(game)
-			if err := gl.Run(time, fps); err != nil {
-				return err
-			}
-			defer gl.Stop()
-
-			return nil
+			return game, err
 		},
 	},
 	{
 		"Breakout",
 		"Arcade classic - break blocks and chase high scores in this addictive paddle game",
-		func() error {
+		func() (core.Game, error) {
 			game, err := breakout.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
-			gl := core.NewGameLoop(game)
-			if err := gl.Run(time, fps); err != nil {
-				return err
-			}
-			defer gl.Stop()
-
-			return nil
+			return game, err
 		},
 	},
 	{
 		"Flappy Bird",
 		"Modern classic - navigate through pipes with precise timing in this challenging side-scroller",
-		func() error {
+		func() (core.Game, error) {
 			game, err := flappybird.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
-			gl := core.NewGameLoop(game)
-			if err := gl.Run(time, fps); err != nil {
-				return err
-			}
-			defer gl.Stop()
-
-			return nil
+			return game, err
 		},
 	},
 	{
 		"Sorts",
 		"Visualization of various sorting algorithms including Quick Sort, Bubble Sort, and Merge Sort",
-		func() error {
+		func() (core.Game, error) {
 			game, err := sorts.NewGame(width, height, workDir, debug, overlay)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
-			gl := core.NewGameLoop(game)
-			if err := gl.Run(time, fps); err != nil {
-				return err
-			}
-			defer gl.Stop()
-
-			return nil
+			return game, err
 		},
 	},
 }
