@@ -10,7 +10,6 @@ import (
 
 	"github.com/kuhree/gg/internal/engine/render"
 	"github.com/kuhree/gg/internal/utils"
-	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/term"
 )
 
@@ -18,7 +17,6 @@ import (
 type GameLoop struct {
 	game         Game
 	term         *term.Terminal
-	termOldState *term.State
 	logger       *slog.Logger
 	running      bool
 	keyEvents    chan InputEvent
@@ -50,11 +48,11 @@ func (gl *GameLoop) Run(targetTime, targetFps float64) error {
 
 	// Set terminal into raw mode to capture input
 	fd := int(os.Stdin.Fd())
-	oldState, err := terminal.MakeRaw(fd)
+	oldState, err := term.MakeRaw(fd)
 	if err != nil {
 		panic(err)
 	}
-	defer terminal.Restore(fd, oldState)
+	defer term.Restore(fd, oldState)
 	defer render.ShowCursor()
 
 	gl.term = term.NewTerminal(os.Stdin, "")
