@@ -4,20 +4,16 @@ import (
 	"encoding/json"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"unicode"
+
+	"github.com/kuhree/gg/internal/utils"
 )
 
 type Config interface {
 	Get() *BaseConfig
 	Save() error
 	Load() error
-}
-
-func ensureDir(filename string) error {
-	dir := filepath.Dir(filename)
-	return os.MkdirAll(dir, 0755)
 }
 
 // BaseConfig holds common configuration values and methods
@@ -66,7 +62,7 @@ func (c *BaseConfig) Load() error {
 
 // SaveConfig is a helper function to save any struct implementing ConfigInterface
 func SaveConfig(c Config) error {
-	if err := ensureDir(c.Get().ConfigFile); err != nil {
+	if err := utils.EnsureDir(c.Get().ConfigFile); err != nil {
 		return err
 	}
 	file, err := os.Create(c.Get().ConfigFile)
@@ -79,7 +75,7 @@ func SaveConfig(c Config) error {
 
 // LoadConfig is a helper function to load any struct implementing ConfigInterface
 func LoadConfig(c Config) error {
-	if err := ensureDir(c.Get().ConfigFile); err != nil {
+	if err := utils.EnsureDir(c.Get().ConfigFile); err != nil {
 		return err
 	}
 	file, err := os.Open(c.Get().ConfigFile)
