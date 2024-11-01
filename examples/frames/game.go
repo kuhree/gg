@@ -18,30 +18,36 @@ type Game struct {
 	renderer *render.Renderer
 	logger   *slog.Logger
 
-	lastTime  time.Time
-	totalTime float64
+	lastTime   time.Time
+	totalTime  float64
+	frameCount int
 
-	frameCount  int
 	targetFps   float64
 	currentFps  float64
-	minFps      float64
-	maxFps      float64
-	avgFps      float64
 	targetDelta float64
+
+	// FPS stats for different intervals
+	fpsStats5s  *fpsStats
+	fpsStats10s *fpsStats
+	fpsStats30s *fpsStats
 }
 
 // NewGame creates a new instance of the Frames game
 func NewGame(width, height int, targetFps float64) *Game {
 	renderer := render.NewRenderer(width, height, render.DefaultPalette)
 
+	now := time.Now()
 	return &Game{
 		Width:       width,
 		Height:      height,
 		renderer:    renderer,
 		logger:      utils.Logger,
-		lastTime:    time.Now(),
+		lastTime:    now,
 		targetFps:   targetFps,
 		targetDelta: 1.0 / targetFps,
+		fpsStats5s:  newFpsStats(5 * time.Second),
+		fpsStats10s: newFpsStats(10 * time.Second),
+		fpsStats30s: newFpsStats(30 * time.Second),
 	}
 }
 
@@ -53,25 +59,13 @@ func (g *Game) Update(dt float64) error {
 	g.currentFps = currentFps
 	g.lastTime = now
 
-	// Update stats
 	g.frameCount++
 	g.totalTime += elapsed
 
-	// Calculate FPS difference from target
-
-	if g.frameCount == 1 {
-		g.minFps = currentFps
-		g.maxFps = currentFps
-	} else {
-		if currentFps < g.minFps {
-			g.minFps = currentFps
-		}
-		if currentFps > g.maxFps {
-			g.maxFps = currentFps
-		}
-	}
-
-	g.avgFps = float64(g.frameCount) / g.totalTime
+	// Update interval stats
+	g.fpsStats5s.update(currentFps, now)
+	g.fpsStats10s.update(currentFps, now)
+	g.fpsStats30s.update(currentFps, now)
 	return nil
 }
 
@@ -96,17 +90,25 @@ func (g *Game) Draw() {
 	}
 	_ = g.renderer.DrawText(fmt.Sprintf("FPS Diff: %+.2f", fpsDiff), 2, 4, diffColor)
 
-	// Display FPS statistics
-	_ = g.renderer.DrawText(fmt.Sprintf("Min FPS: %.2f", g.minFps), 2, 6, render.ColorGreen)
-	_ = g.renderer.DrawText(fmt.Sprintf("Max FPS: %.2f", g.maxFps), 2, 7, render.ColorRed)
-	_ = g.renderer.DrawText(fmt.Sprintf("Avg FPS: %.2f", g.avgFps), 2, 8, render.ColorYellow)
+	// Display FPS statistics for different intervals
+	_ = g.renderer.DrawText("5 Second Stats:", 2, 6, render.ColorWhite)
+	_ = g.renderer.DrawText(fmt.Sprintf("  Min: %.2f  Max: %.2f  Avg: %.2f", 
+		g.fpsStats5s.min, g.fpsStats5s.max, g.fpsStats5s.avg()), 2, 7, render.ColorGreen)
+
+	_ = g.renderer.DrawText("10 Second Stats:", 2, 9, render.ColorWhite)
+	_ = g.renderer.DrawText(fmt.Sprintf("  Min: %.2f  Max: %.2f  Avg: %.2f", 
+		g.fpsStats10s.min, g.fpsStats10s.max, g.fpsStats10s.avg()), 2, 10, render.ColorYellow)
+
+	_ = g.renderer.DrawText("30 Second Stats:", 2, 12, render.ColorWhite)
+	_ = g.renderer.DrawText(fmt.Sprintf("  Min: %.2f  Max: %.2f  Avg: %.2f", 
+		g.fpsStats30s.min, g.fpsStats30s.max, g.fpsStats30s.avg()), 2, 13, render.ColorMagenta)
 
 	// Display frame count and total time
-	_ = g.renderer.DrawText(fmt.Sprintf("Frames: %d", g.frameCount), 2, 9, render.ColorCyan)
-	_ = g.renderer.DrawText(fmt.Sprintf("Total Time: %.2fs", g.totalTime), 2, 10, render.ColorMagenta)
+	_ = g.renderer.DrawText(fmt.Sprintf("Frames: %d", g.frameCount), 2, 15, render.ColorCyan)
+	_ = g.renderer.DrawText(fmt.Sprintf("Total Time: %.2fs", g.totalTime), 2, 16, render.ColorCyan)
 
 	// Display window dimensions
-	_ = g.renderer.DrawText(fmt.Sprintf("Window: %dx%d", g.Width, g.Height), 2, 11, render.ColorWhite)
+	_ = g.renderer.DrawText(fmt.Sprintf("Window: %dx%d", g.Width, g.Height), 2, 18, render.ColorWhite)
 
 	g.renderer.Render()
 }
@@ -128,4 +130,59 @@ func (g *Game) Init() error {
 // Cleanup performs any necessary cleanup
 func (g *Game) Cleanup() {
 	g.logger.Info("Frames game cleaned up")
+}
+// fpsStats tracks FPS statistics over a time interval
+type fpsStats struct {
+	interval time.Duration
+	samples  []float64
+	times    []time.Time
+	min      float64
+	max      float64
+}
+
+func newFpsStats(interval time.Duration) *fpsStats {
+	return &fpsStats{
+		interval: interval,
+		min:      -1, // sentinel value
+	}
+}
+
+func (s *fpsStats) update(fps float64, now time.Time) {
+	// Remove old samples
+	cutoff := now.Add(-s.interval)
+	i := 0
+	for i < len(s.times) && s.times[i].Before(cutoff) {
+		i++
+	}
+	if i > 0 {
+		s.samples = s.samples[i:]
+		s.times = s.times[i:]
+	}
+
+	// Add new sample
+	s.samples = append(s.samples, fps)
+	s.times = append(s.times, now)
+
+	// Update min/max
+	s.min = fps
+	s.max = fps
+	for _, sample := range s.samples {
+		if sample < s.min || s.min < 0 {
+			s.min = sample
+		}
+		if sample > s.max {
+			s.max = sample
+		}
+	}
+}
+
+func (s *fpsStats) avg() float64 {
+	if len(s.samples) == 0 {
+		return 0
+	}
+	sum := 0.0
+	for _, fps := range s.samples {
+		sum += fps
+	}
+	return sum / float64(len(s.samples))
 }
