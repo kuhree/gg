@@ -15,11 +15,11 @@ import (
 
 // GameLoop manages the main game loop
 type GameLoop struct {
-	game         Game
-	term         *term.Terminal
-	logger       *slog.Logger
-	running      bool
-	keyEvents    chan InputEvent
+	game      Game
+	term      *term.Terminal
+	logger    *slog.Logger
+	running   bool
+	keyEvents chan InputEvent
 
 	resize  chan os.Signal
 	signals chan os.Signal
@@ -63,7 +63,7 @@ func (gl *GameLoop) Run(targetTime, targetFps float64) error {
 	signal.Notify(gl.signals, syscall.SIGINT, syscall.SIGTERM)
 	signal.Notify(gl.resize, syscall.SIGWINCH)
 
-	// Start listener in a separate goroutine
+	// Start listener(s) in a separate goroutine
 	go func() {
 		for gl.running {
 			var buf [1]byte
@@ -98,7 +98,7 @@ func (gl *GameLoop) Run(targetTime, targetFps float64) error {
 		deltaTime *= targetTime // Speedup/slowdown the game
 		lastTime = currentTime
 
-		// Handle input (non-blocking)
+		// Handle events (non-blocking)
 		select {
 		case <-gl.resize:
 			gl.updateTerminalSize(gl.term)
@@ -118,7 +118,7 @@ func (gl *GameLoop) Run(targetTime, targetFps float64) error {
 				}
 			}
 		default:
-			// No input, continue with the game loop
+			// noop
 		}
 
 		// Update game state
