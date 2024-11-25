@@ -25,7 +25,7 @@ type Config struct {
 	// Bird physics
 	BirdGravity   float64
 	BirdJumpForce float64
-	
+
 	// Pipe settings
 	PipeSpeed     float64
 	PipeGap       float64
@@ -36,11 +36,11 @@ type Config struct {
 
 func NewConfig(workDir string) (*Config, error) {
 	cfg := &Config{
-		BaseConfig:      config.NewBaseConfig(workDir, "Flappy Bird"),
-		TitleOffset:     0.1,
-		LineSpacing:     2,
-		ScoreOffset:     1.0 / 6,
-		ControlsOffset:  2.0 / 8,
+		BaseConfig:     config.NewBaseConfig(workDir, "Flappy Bird"),
+		TitleOffset:    0.1,
+		LineSpacing:    2,
+		ScoreOffset:    1.0 / 6,
+		ControlsOffset: 2.0 / 8,
 
 		InitialLives:    1,
 		MaxNameLength:   20,
@@ -49,7 +49,7 @@ func NewConfig(workDir string) (*Config, error) {
 
 		BirdGravity:   20.0,
 		BirdJumpForce: -10.0,
-		
+
 		PipeSpeed:     15.0,
 		PipeGap:       10.0,
 		PipeSpacing:   50.0,

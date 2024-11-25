@@ -132,8 +132,6 @@ func NewPauseMenuScene(game *Game) *PauseMenuScene {
 	}
 }
 
-
-
 // NewGameOverScene creates a new game over scene
 func NewGameOverScene(game *Game) *GameOverScene {
 	return &GameOverScene{

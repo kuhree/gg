@@ -6,7 +6,7 @@ import "github.com/kuhree/gg/internal/engine/objects"
 type Object struct {
 	objects.GameObject
 
-	Speed    objects.Vector2D
+	Speed     objects.Vector2D
 	Health    float64
 	MaxHealth float64
 }

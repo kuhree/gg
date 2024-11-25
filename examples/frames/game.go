@@ -135,6 +135,7 @@ func (g *Game) Init() error {
 func (g *Game) Cleanup() {
 	g.logger.Info("Frames game cleaned up")
 }
+
 // fpsStats tracks FPS statistics over a time interval
 type fpsStats struct {
 	interval time.Duration

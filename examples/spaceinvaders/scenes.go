@@ -10,8 +10,8 @@ import (
 )
 
 const (
-		titleOffset    = 1.0 / 10
-		lineSpacing    = 2
+	titleOffset = 1.0 / 10
+	lineSpacing = 2
 )
 
 // BaseScene provides common functionality for all scenes

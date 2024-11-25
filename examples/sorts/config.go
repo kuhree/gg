@@ -17,8 +17,8 @@ type Config struct {
 	// Visualization settings
 	ArraySize      int
 	UpdateInterval float64
-	BarWidth      float64
-	MaxValue      int
+	BarWidth       float64
+	MaxValue       int
 }
 
 func NewConfig(workDir string) (*Config, error) {
@@ -31,8 +31,8 @@ func NewConfig(workDir string) (*Config, error) {
 
 		ArraySize:      100,
 		UpdateInterval: 0.1,
-		BarWidth:      1,
-		MaxValue:      100,
+		BarWidth:       1,
+		MaxValue:       100,
 	}
 
 	err := config.LoadConfig(cfg)

@@ -132,9 +132,9 @@ func (s *MergeSort) Step(arr []int, g *Game) bool {
 	copy(temp, arr[s.left:right])
 
 	// Merge the two halves
-	i := 0                 // Index for left half in temp array
-	j := mid - s.left     // Index for right half in temp array
-	k := s.left           // Index in original array
+	i := 0            // Index for left half in temp array
+	j := mid - s.left // Index for right half in temp array
+	k := s.left       // Index in original array
 	rightEnd := right - s.left
 
 	for i < mid-s.left && j < rightEnd {
