@@ -398,8 +398,8 @@ func (s *PlayingScene) checkGameState(_ float64) (bool, string) {
 func (s *PlayingScene) increaseLevel() {
 	s.CurrentLevel++
 	s.currentPipeSpeed = min(maxPipeSpeed, s.currentPipeSpeed*1.2)       // Increase speed by 20%
-	s.currentPipeGap = max(minPipeGap, s.currentPipeGap*0.9)            // Decrease gap by 10%
-	s.currentGravity = min(maxGravity, s.currentGravity*1.1)            // Increase gravity by 10%
+	s.currentPipeGap = max(minPipeGap, s.currentPipeGap*0.9)             // Decrease gap by 10%
+	s.currentGravity = min(maxGravity, s.currentGravity*1.1)             // Increase gravity by 10%
 	s.currentPipeSpacing = max(minPipeSpacing, s.currentPipeSpacing*0.9) // Decrease spacing by 10%
 }
 
@@ -407,9 +407,9 @@ func (s *PlayingScene) increaseLevel() {
 func (s *PlayingScene) decreaseLevel() {
 	if s.CurrentLevel > 0 {
 		s.CurrentLevel--
-		s.currentPipeSpeed = max(minPipeSpeed, s.currentPipeSpeed/1.2)    // Decrease speed by 20%
-		s.currentPipeGap = min(maxPipeGap, s.currentPipeGap/0.9)         // Increase gap by 10%
-		s.currentGravity = max(minGravity, s.currentGravity/1.1)         // Decrease gravity by 10%
+		s.currentPipeSpeed = max(minPipeSpeed, s.currentPipeSpeed/1.2)       // Decrease speed by 20%
+		s.currentPipeGap = min(maxPipeGap, s.currentPipeGap/0.9)             // Increase gap by 10%
+		s.currentGravity = max(minGravity, s.currentGravity/1.1)             // Decrease gravity by 10%
 		s.currentPipeSpacing = min(maxPipeSpacing, s.currentPipeSpacing/0.9) // Increase spacing by 10%
 	}
 }
@@ -464,7 +464,6 @@ func (s *PlayingScene) drawObjOverlay(x, y int, color render.Color) {
 				)
 			}
 		}
-
 
 		// Draw debug info offset to the right
 		for i, info := range debugInfo {

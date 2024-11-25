@@ -8,12 +8,12 @@ import (
 // Bird represents the player-controlled bird
 type Bird struct {
 	objects.GameObject
-	Velocity    float64
-	Gravity     float64
-	JumpForce   float64
-	Character   rune
-	Color       render.Color
-	IsDead      bool
+	Velocity  float64
+	Gravity   float64
+	JumpForce float64
+	Character rune
+	Color     render.Color
+	IsDead    bool
 }
 
 // Pipe represents an obstacle pipe
@@ -21,7 +21,7 @@ type Pipe struct {
 	objects.GameObject
 	Color       render.Color
 	IsUpperPipe bool
-	Scored bool
+	Scored      bool
 }
 
 // NewBird creates a new bird instance
@@ -32,12 +32,12 @@ func NewBird(x, y float64, config *Config) *Bird {
 			Width:    1,
 			Height:   1,
 		},
-		Velocity:    0,
-		Gravity:     config.BirdGravity,
-		JumpForce:   config.BirdJumpForce,
-		Character:   '>', 
-		Color:       render.ColorYellow,
-		IsDead:      false,
+		Velocity:  0,
+		Gravity:   config.BirdGravity,
+		JumpForce: config.BirdJumpForce,
+		Character: '>',
+		Color:     render.ColorYellow,
+		IsDead:    false,
 	}
 }
 
@@ -51,7 +51,6 @@ func NewPipe(x, y float64, height float64, width float64, isUpper bool) *Pipe {
 		},
 		Color:       render.ColorGreen,
 		IsUpperPipe: isUpper,
-		Scored: false,
+		Scored:      false,
 	}
 }
-

@@ -47,7 +47,6 @@ func (b *Board) Add(name string, score int, notes string) {
 	}
 }
 
-
 func (b *Board) Save(filename string) error {
 	if len(b.Records) <= 0 {
 		return nil

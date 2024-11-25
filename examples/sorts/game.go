@@ -45,14 +45,14 @@ func NewGame(width, height int, workDir string, debug bool, overlay bool) (*Game
 	}
 
 	game := &Game{
-		Height:    height,
-		Width:     width,
-		Renderer:  renderer,
-		Logger:    logger,
-		Config:    config,
-		Debug:     debug,
-		Overlay:   overlay,
-		Scenes:    scenes,
+		Height:       height,
+		Width:        width,
+		Renderer:     renderer,
+		Logger:       logger,
+		Config:       config,
+		Debug:        debug,
+		Overlay:      overlay,
+		Scenes:       scenes,
 		SortComplete: false,
 	}
 
