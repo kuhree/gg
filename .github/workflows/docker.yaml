@@ -66,6 +66,7 @@ jobs:
           curl \
             -H "Authorization: Bearer ${{ secrets.NTFY_API_TOKEN }}" \
             -H "Title: Published docker images 🚀" \
+            -H "Tags: whale,cd " \
             -H "Content-Type: text/plain" \
             -d $'Repo: ${{ github.repository }}\nCommit: ${{ github.sha }}\nRef: ${{ github.ref }}\nStatus: ${{ job.status}}' \
             ${{ secrets.NTFY_URL }}
