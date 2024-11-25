@@ -60,3 +60,12 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}I
+
+      - name: Ntfy
+        run: |
+          curl \
+            -H "Authorization: Bearer ${{ secrets.NTFY_API_TOKEN }}" \
+            -H "Title: Build Complete 🚀" \
+            -H "Content-Type: text/plain" \
+            -d $'Repo: ${{ github.repository }}\nCommit: ${{ github.sha }}\nRef: ${{ github.ref }}\nStatus: ${{ job.status}}' \
+            ${{ secrets.NTFY_URL }}
