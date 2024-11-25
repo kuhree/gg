@@ -28,7 +28,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: install deps
-        run: go get .
+        run: go mod download
 
       - name: lint
         run: go -s -l ./...
