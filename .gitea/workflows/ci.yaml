@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        go-version: [ '1.23.x' ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: install deps
+      - run: go get .
+
+      - name: lint
+        run: go -s -l ./...
+
+      - name: Test with Go
+        run: go test -json ./... > TestResults-${{ matrix.go-version }}.json
+      - name: upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: Go-results-${{ matrix.go-version }}
+          path: TestResults-${{ matrix.go-version }}.json
+
+      - name: build
+        run: go build -o out -v ./...
+      - name: upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: gg-${{ matrix.go-version }}
+          path: out/gg
