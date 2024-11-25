@@ -42,7 +42,7 @@ jobs:
           path: TestResults-${{ matrix.go-version }}.json
 
       - name: build
-        run: go build -o out -v ./...
+        run: go build -o out/ -v ./...
       - name: upload binary
         uses: actions/upload-artifact@v4
         with:
