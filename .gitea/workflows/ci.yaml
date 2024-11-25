@@ -38,7 +38,7 @@ jobs:
       - name: upload test results
         uses: actions/upload-artifact@v3
         with:
-          name: Go-results-${{ matrix.go-version }}
+          name: TestResults-${{ matrix.go-version }}
           path: TestResults-${{ matrix.go-version }}.json
 
       - name: build
