@@ -80,7 +80,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: git.littlevibe.net/${{ env.OWNER_LOWERCASE }}/public
+          images: git.littlevibe.net/${{ env.OWNER_LOWERCASE }}/gg
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -88,7 +88,7 @@ jobs:
             type=raw,value=sha-${{ env.GITHUB_SHA_SHORT }}
           labels: |
             maintainer=${{ github.repository_owner }}
-            org.opencontainers.image.source="https://git.littlevibe.net/${{ github.repository_owner }}/public"
+            org.opencontainers.image.source="https://git.littlevibe.net/${{ github.repository_owner }}/gg"
 
       - name: Build and Push
         id: build-and-push

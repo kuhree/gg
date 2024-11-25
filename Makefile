@@ -64,23 +64,4 @@ watch:
             fi; \
         fi
 
-# Create DB container
-docker-up:
-	@if docker compose up 2>/dev/null; then \
-		: ; \
-	else \
-		echo "Falling back to Docker Compose V1"; \
-		docker compose up; \
-	fi
-
-# Shutdown DB container
-docker-down:
-	@if docker compose down 2>/dev/null; then \
-		: ; \
-	else \
-		echo "Falling back to Docker Compose V1"; \
-		docker compose down; \
-	fi
-
-
 .PHONY: all build run lint test clean watch templ-install docker-up docker-down
