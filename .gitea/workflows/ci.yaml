@@ -31,7 +31,7 @@ jobs:
         run: go mod download
 
       - name: lint
-        run: go -s -l ./...
+        run: go fmt -s -l ./...
 
       - name: Test with Go
         run: go test -json ./... > TestResults-${{ matrix.go-version }}.json
