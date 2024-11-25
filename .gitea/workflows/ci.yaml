@@ -44,7 +44,7 @@ jobs:
       - name: build
         run: go build -o out/ -v ./...
       - name: upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: gg-${{ matrix.go-version }}
           path: out/gg
