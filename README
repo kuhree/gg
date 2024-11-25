@@ -2,10 +2,12 @@
 
 GG is a bunch of classic games written in Go. It's designed to create classic arcade-style games using ASCII characters for rendering.
 
+> [!warning] I built this on the side to try and get more familiar with Go. I wouldn't rely on this, but it was a fun project.
+> I'd estimate ~40% of the code was AI generated (if you can't tell). No tests, no docs, but I may revisit in the future.
+
 ## Features
 
 - Fixed timestep for core gameplay logic, physics, and collision detection
-- Time-based calculations for rendering and animations
 - Support for multiple game states (Main Menu, Gameplay, Pause, Game Over)
 - Customizable game elements (levels, player, camera, AI enemies, NPCs, obstacles, weapons, power-ups)
 - Dev mode with extra features like:
@@ -13,7 +15,6 @@ GG is a bunch of classic games written in Go. It's designed to create classic ar
   - Debug information overlay
   - Entity bounding box visualization
   - Collision detection visualization
-  - Game state inspector
   - Slow motion and frame-by-frame stepping
 
 ## Implemented Games
@@ -32,11 +33,11 @@ The `examples/` directory contains implementations of classic 2D games, includin
 
 - Implement multiple classic arcade games
 - Create a full game experience (gameplay loop, start screen, pause functionality, settings, high score/leaderboards etc.)
-- Minimize dependencies
 
 ## Getting Started
 
-[Add instructions for setting up and running the project]
+1. Clone the repo `git clone git.littlevibe.net/kuhree/gg`
+2. Run the app `go run cmd/gg/main.go`
 
 ## Usage
 
@@ -63,10 +64,9 @@ Developer tools:
 - '2' to toggle performance metrics display
 - 'F4' to toggle entity bounding box visualization
 - 'F5' to toggle collision detection visualization
-- 'F6' to open the game state inspector
 - '_' and '+' to increase/decrease level
 
-For game-specific controls and instructions, refer to the in-game help menu or the individual game's documentation in the `games/` directory.
+For game-specific controls and instructions, refer to the in-game help menu or the individual game's documentation in the `examples/` directory.
 
 ## Architecture
 
@@ -79,47 +79,14 @@ gg/
 │       └── main.go
 ├── internal/
 │   ├── engine/
-│   │   ├── core/
-│   │   │   ├── game.go
-│   │   │   ├── state.go
-│   │   │   └── loop.go
-│   │   ├── input/
-│   │   │   └── input.go
-│   │   ├── render/
-│   │   │   └── renderer.go
-│   │   ├── physics/
-│   │   │   ├── collision.go
-│   │   │   └── physics.go
-│   │   ├── audio/
-│   │   │   └── audio.go
-│   │   └── debug/
-│   │       └── debug.go
-│   ├── entities/
-│   │   ├── player.go
-│   │   ├── enemy.go
-│   │   └── item.go
 │   └── utils/
-│       ├── math.go
-│       └── logging.go
-├── games/
+├── examples/
 │   ├── spaceinvaders/
 │   │   └── game.go
-│   ├── pong/
-│   │   └── game.go
-│   └── ...
-├── assets/
-│   ├── fonts/
-│   └── sounds/
-├── configs/
-│   └── config.yaml
-├── tests/
-│   └── ...
-├── docs/
 │   └── ...
 ├── go.mod
 ├── go.sum
-├── Makefile
-└── README.md
+└── README
 
 ```
 
@@ -130,57 +97,26 @@ gg/
 2. **internal/**: Houses the core engine components and game-specific code.
 
    - **engine/**: Core engine components.
+     - **config/**: Config file management
      - **core/**: Central game loop, state management, etc.
-     - **input/**: Input handling (keyboard, mouse, etc.).
+     - **events/**: event handling and management
+     - **leaderboard/**: leaderboards file management
+		 - **objects/**: Common game objects that can be used across different games.
      - **render/**: Rendering system for ASCII graphics.
-     - **physics/**: Collision detection and physics calculations.
-     - **audio/**: Sound system (if applicable for terminal-based games).
-     - **debug/**: Debugging and development tools.
-   - **entities/**: Common game entities that can be used across different games.
+     - **scenes/**: Scene loading
    - **utils/**: Utility functions and helpers.
 
-3. **games/**: Individual game implementations using the engine.
-
-4. **assets/**: Game assets like fonts or sound files (if applicable).
-
-5. **configs/**: Configuration files.
-
-6. **tests/**: Unit and integration tests.
-
-7. **docs/**: Documentation files.
-
-### Design Principles
-
-- **Modularity**: Each package has a specific responsibility, promoting code organization and reusability.
-- **Extensibility**: New features or games can be added without modifying existing code.
-- **Encapsulation**: The `internal/` directory prevents external projects from importing and depending on the engine's internal implementation details.
-- **Testability**: The modular structure facilitates writing and running tests for individual components.
-
-### Best Practices
-
-- Use interfaces to allow for easy mocking in tests and to provide flexibility in implementation details.
-- Implement dependency injection to manage relationships between different components of the engine.
-- Follow Go's standard naming conventions and package structure guidelines.
-- Write comprehensive unit tests for each package.
-- Document public APIs and important implementation details.
+3. **examples/**: Individual game implementations using the engine.
 
 ### Adding a New Game
 
 To add a new game:
 
-1. Create a new directory under `games/` with your game's name.
+1. Create a new directory under `examples/` with your game's name.
 2. Implement your game logic in a `game.go` file within this directory.
 3. Use the engine components from the `internal/engine/` package to handle core functionality.
 4. Add any game-specific assets to the `assets/` directory.
 5. Update the main game launcher in `cmd/gg/main.go` to include your new game.
-
-### Contributing
-
-When contributing to the project, please ensure your code adheres to the existing architecture and follows the established design principles. Refer to the CONTRIBUTING.md file for more detailed guidelines on how to contribute to the project.
-
-## Contributing
-
-[Add information about how to contribute to the project]
 
 ## License
 
