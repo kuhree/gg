@@ -36,7 +36,7 @@ The `examples/` directory contains implementations of classic 2D games, includin
 
 ## Getting Started
 
-1. Clone the repo `git clone git.littlevibe.net/kuhree/gg`
+1. Clone the repo `git clone git.kuhree.com/kuhree/gg`
 2. Run the app `go run cmd/gg/main.go`
 
 ## Usage
