@@ -9,7 +9,7 @@
     self,
     nixpkgs,
     ...
-  } @ inputs: let
+  }: let
     version = builtins.substring 0 8 (self.lastModifiedDate or self.lastModified or "19700101");
     supportedSystems = ["x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin"];
 
@@ -27,8 +27,8 @@
       system,
       pkgs,
       ...
-    }: {
-      default = pkgs.buildGoModule {
+    }:
+      pkgs.buildGoModule {
         inherit version;
         pname = "gg";
         src = ./.;
@@ -40,8 +40,7 @@
         checkPhase = ''
           go test ./...
         '';
-      };
-    });
+      });
   in {
     formatter = forAllSystems ({
       pkgs,
@@ -54,7 +53,7 @@
       system,
     }: {
       fmt =
-        pkgs.runCommand "gg-fmt-check" {
+        pkgs.runCommand "gg-check-fmt" {
           nativeBuildInputs = [pkgs.go];
         } ''
           cd ${./.}
@@ -71,8 +70,9 @@
     packages = forAllSystems ({
       pkgs,
       system,
-    }:
-      gg.${system});
+    }: {
+      default = gg.${system};
+    });
 
     devShells = forAllSystems ({
       pkgs,
