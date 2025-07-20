@@ -58,4 +58,4 @@ jobs:
           token: ${{ secrets.NTFY_API_TOKEN }}
           url: ${{ vars.NTFY_URL }}
           status: ${{ job.status }}
-          title: WWW-KUHREE CI
+          title: GG CI
