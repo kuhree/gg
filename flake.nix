@@ -3,9 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-
-    templ.url = "github:a-h/templ";
-    templ.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = {
@@ -15,8 +12,6 @@
   } @ inputs: let
     version = builtins.substring 0 8 (self.lastModifiedDate or self.lastModified or "19700101");
     supportedSystems = ["x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin"];
-
-    templ = system: inputs.templ.packages.${system}.templ;
 
     # See: https://ayats.org/blog/no-flake-utils
     forAllSystems = f:
@@ -38,10 +33,6 @@
         pname = "gg";
         src = ./.;
         doCheck = true;
-
-        preBuild = ''
-          ${templ system}/bin/templ generate
-        '';
 
         # vendorHash = pkgs.lib.fakeHash;
         vendorHash = "sha256-BhMv2rA80lHxmUqot5qH0soeVjIGV+jNdUQEtDU40MQ=";
@@ -93,7 +84,6 @@
           pkgs.gopls
           pkgs.gotools
           pkgs.go-tools
-          (templ system)
         ];
 
         shellHook = ''

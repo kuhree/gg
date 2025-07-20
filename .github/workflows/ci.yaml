@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [main, ci]
     tags: ["v*"]
   pull_request:
     branches: [main]
@@ -34,6 +34,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: TestResults-${{ matrix.go-version }}.json.zip
+
           path: TestResults-${{ matrix.go-version }}.json
 
   ci:
