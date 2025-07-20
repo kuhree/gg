@@ -20,7 +20,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: setup Go ${{ matrix.go-version }}
+      - name: "setup Go ${{ matrix.go-version }}"
         uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
@@ -33,7 +33,7 @@ jobs:
       - name: upload test results
         uses: actions/upload-artifact@v3
         with:
-          name: TestResults-${{ matrix.go-version }}
+          name: TestResults-${{ matrix.go-version }}.json.zip
           path: TestResults-${{ matrix.go-version }}.json
 
   ci:
