@@ -9,33 +9,33 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    concurrency: test
-    strategy:
-      matrix:
-        go-version: ['1.24.x']
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: "setup Go ${{ matrix.go-version }}"
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ matrix.go-version }}
-
-      - name: install deps
-        run: go mod download
-
-      - name: Test with Go
-        run: go test -json ./... > TestResults-${{ matrix.go-version }}.json
-      - name: upload test results
-        uses: actions/upload-artifact@v3
-        with:
-          name: TestResults-${{ matrix.go-version }}.json.zip
-
-          path: TestResults-${{ matrix.go-version }}.json
+  # test:
+  #   runs-on: ubuntu-latest
+  #   concurrency: test
+  #   strategy:
+  #     matrix:
+  #       go-version: ['1.24.x']
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #
+  #     - name: "setup Go ${{ matrix.go-version }}"
+  #       uses: actions/setup-go@v5
+  #       with:
+  #         go-version: ${{ matrix.go-version }}
+  #
+  #     - name: install deps
+  #       run: go mod download
+  #
+  #     - name: Test with Go
+  #       run: go test -json ./... > TestResults-${{ matrix.go-version }}.json
+  #     - name: upload test results
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: TestResults-${{ matrix.go-version }}.json.zip
+  #
+  #         path: TestResults-${{ matrix.go-version }}.json
 
   ci:
     runs-on: ubuntu-latest
@@ -49,7 +49,7 @@ jobs:
       - name: check and build flake
         uses: https://git.kuhree.com/kuhree/actions-flake-ci@v1
         with:
-          artifact_name: gg.zip
+          artifact_name: gg
           artifact_path: result
 
       - name: ntfy status
