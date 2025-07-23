@@ -16,18 +16,10 @@
     # See: https://ayats.org/blog/no-flake-utils
     forAllSystems = f:
       nixpkgs.lib.genAttrs supportedSystems (
-        system:
-          f {
-            inherit system;
-            pkgs = nixpkgs.legacyPackages.${system};
-          }
+        system: f nixpkgs.legacyPackages.${system}
       );
 
-    gg = forAllSystems ({
-      system,
-      pkgs,
-      ...
-    }:
+    gg = pkgs:
       pkgs.buildGoModule {
         inherit version;
         pname = "gg";
@@ -40,50 +32,37 @@
         checkPhase = ''
           go test ./...
         '';
-      });
+      };
   in {
-    formatter = forAllSystems ({
-      pkgs,
-      system,
-    }:
-      pkgs.alejandra);
+    formatter = forAllSystems (pkgs: pkgs.alejandra);
 
-    checks = forAllSystems ({
-      pkgs,
-      system,
-    }: {
+    checks = forAllSystems (pkgs: {
       fmt =
         pkgs.runCommand "gg-check-fmt" {
           nativeBuildInputs = [pkgs.go];
         } ''
           cd ${./.}
-          if [ -n "$(gofmt -l .)" ]; then
+          not_formatted="$(gofmt -l .)"
+          if [ -n "$not_formatted" ]; then
             echo "Code is not gofmt'd:"
-            gofmt -l .
+            echo "$not_formatted"
             exit 1
           fi
+
           touch $out
         '';
     });
 
     # Provide some binary packages for selected system types.
-    packages = forAllSystems ({
-      pkgs,
-      system,
-    }: {
-      default = gg.${system};
+    packages = forAllSystems (pkgs: {
+      default = gg pkgs;
     });
 
-    devShells = forAllSystems ({
-      pkgs,
-      system,
-    }: {
+    devShells = forAllSystems (pkgs: {
       default = pkgs.mkShell {
         buildInputs = [
           pkgs.go
           pkgs.gopls
-          pkgs.gotools
-          pkgs.go-tools
         ];
 
         shellHook = ''
